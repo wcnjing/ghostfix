@@ -5,6 +5,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 
+import { generateJson } from '@/lib/llm';
 import type { AnalysisResult, Fix } from '@/lib/types';
 
 const MODEL = 'claude-sonnet-4-6';
@@ -166,46 +167,23 @@ async function callAnthropic(analysis: AnalysisResult): Promise<GeneratedDrafts 
   }
 }
 
-interface GeminiResponse {
-  candidates?: { content?: { parts?: { text?: string }[] } }[];
-}
-
-async function callGemini(analysis: AnalysisResult): Promise<GeneratedDrafts | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
-  // gemini-2.0-flash is the current free-tier sweet spot: fast + structured-output capable.
-  const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(analysis) }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: MAX_TOKENS,
-          temperature: 0.7,
-        },
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as GeminiResponse;
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-    return validateDrafts(extractJsonObject(text));
-  } catch {
-    return null;
-  }
+async function callFreeLlm(analysis: AnalysisResult): Promise<GeneratedDrafts | null> {
+  // Shared chain: Groq → Gemini. Both have free tiers; Groq is the unconditional
+  // path so we hit it first inside generateJson().
+  const parsed = await generateJson<GeneratedDrafts>(
+    buildPrompt(analysis),
+    `{"faq_markdown": "...", "comparison_markdown": "...", "schema_jsonld": "..."}`,
+  );
+  return validateDrafts(parsed);
 }
 
 export async function repairAgent(analysis: AnalysisResult): Promise<Fix[]> {
   const brand = host(analysis.brandUrl);
   const competitor = host(analysis.competitorUrl);
 
-  // Try paid Anthropic first (best quality), then free-tier Gemini, then templates.
-  const generated = (await callAnthropic(analysis)) ?? (await callGemini(analysis));
+  // Anthropic first when configured (best quality), then the free Groq/Gemini
+  // chain, then deterministic templates.
+  const generated = (await callAnthropic(analysis)) ?? (await callFreeLlm(analysis));
   const drafts: GeneratedDrafts = generated ?? {
     faq_markdown: fallbackFaq(analysis.prompts, brand),
     comparison_markdown: fallbackComparison(brand, competitor),
