@@ -365,20 +365,72 @@ interface DiagnosisProps {
   onBack: () => void;
 }
 
-function CompetitorChip({ c }: { c: DiscoveredCompetitor }) {
+function MetricTile({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  accent?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-pink-100 bg-white/50 px-4 py-3">
-      <a
-        href={c.url}
-        target="_blank"
-        rel="noreferrer"
-        className="text-sm font-medium text-[var(--ink-900)] hover:text-[var(--pink-600)]"
-      >
-        {c.domain}
-      </a>
-      <span className="font-mono text-xs text-[var(--ink-500)]">
-        {c.citationCount}/{c.promptCount}
-      </span>
+    <div
+      className={`rounded-2xl border p-4 ${
+        accent
+          ? 'border-pink-200 bg-gradient-to-br from-pink-50 to-white'
+          : 'border-pink-100 bg-white/60'
+      }`}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+        {label}
+      </p>
+      <p className="mt-2 font-mono text-3xl font-bold text-[var(--ink-900)]">{value}</p>
+      {sub && <p className="mt-1 text-xs text-[var(--ink-500)]">{sub}</p>}
+    </div>
+  );
+}
+
+function CompetitorLeaderboardRow({
+  c,
+  selected,
+}: {
+  c: DiscoveredCompetitor;
+  selected: boolean;
+}) {
+  const pct = c.promptCount > 0 ? (c.citationCount / c.promptCount) * 100 : 0;
+  return (
+    <div
+      className={`rounded-xl border p-3 ${
+        selected ? 'border-pink-300 bg-pink-50/60' : 'border-pink-100 bg-white/40'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <a
+          href={c.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--ink-900)] hover:text-[var(--pink-600)]"
+        >
+          {c.domain}
+          {selected && (
+            <span className="rounded-full bg-pink-500 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+              deep-dive
+            </span>
+          )}
+        </a>
+        <span className="font-mono text-xs text-[var(--ink-700)]">
+          {c.citationCount}/{c.promptCount}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-pink-100">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-400"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -452,108 +504,260 @@ function renderMarkdownToReact(md: string) {
   return <>{out}</>;
 }
 
-function FindingsPanel({ research }: { research: ResearchFindings }) {
-  return (
-    <section className="space-y-6 rounded-2xl border border-pink-100 bg-white/40 p-6">
-      <div>
-        <p className="text-xs uppercase tracking-wide text-[var(--pink-600)]">
-          Research findings
-        </p>
-        <p className="mt-2 text-sm text-[var(--ink-700)]">
-          <span className="font-medium text-[var(--ink-900)]">{research.category}.</span>{' '}
-          {research.brandSummary}
-        </p>
-      </div>
+function FindingsDashboard({
+  research,
+  analysis,
+}: {
+  research: ResearchFindings;
+  analysis: AnalysisResult;
+}) {
+  const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
+  const promptsWithBrand = analysis.citations.filter((c) => c.brandCitedCount > 0).length;
+  const citationShare =
+    analysis.citations.length > 0
+      ? Math.round((promptsWithBrand / analysis.citations.length) * 100)
+      : 0;
+  const brandHost = (() => {
+    try {
+      return new URL(analysis.brandUrl).hostname.replace(/^www\./, '');
+    } catch {
+      return analysis.brandUrl;
+    }
+  })();
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-            Prompts we tested
+  // Pair each prompt with its citation row (same order — guaranteed by the API).
+  const promptRows = analysis.prompts.map((prompt, i) => ({
+    prompt,
+    citation: analysis.citations[i],
+  }));
+
+  return (
+    <div className="space-y-6">
+      {/* Header strip */}
+      <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-pink-100 bg-white/40 px-5 py-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-pink-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              Research
+            </span>
+            <span className="text-sm font-medium text-[var(--ink-900)]">
+              {research.category}
+            </span>
+          </div>
+          <p className="mt-1.5 max-w-2xl text-sm text-[var(--ink-700)]">
+            {research.brandSummary}
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-[var(--ink-700)]">
-            {research.discoveredPrompts.map((p, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="font-mono text-xs text-[var(--ink-500)]">{i + 1}.</span>
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
         </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-            Competitors AI surfaces
+        <div className="flex flex-col items-end text-right">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+            Analyzed
           </p>
-          <p className="mt-1 text-xs text-[var(--ink-500)]">
-            <span className="font-mono">cited / prompts</span> · deep-dove against{' '}
-            <span className="font-medium text-[var(--ink-900)]">
+          <p className="text-sm font-medium text-[var(--ink-900)]">{brandHost}</p>
+          <p className="text-xs text-[var(--ink-500)]">
+            vs.{' '}
+            <span className="font-medium text-[var(--ink-700)]">
               {research.selectedCompetitorDomain}
             </span>
           </p>
-          <div className="mt-2 space-y-2">
-            {research.discoveredCompetitors.map((c) => (
-              <CompetitorChip key={c.domain} c={c} />
-            ))}
-          </div>
         </div>
       </div>
 
-      {research.narrative && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-            Analysis
+      {/* KPI tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <MetricTile
+          label="Visibility score"
+          value={
+            <>
+              {analysis.score}
+              <span className="text-base text-[var(--ink-500)]">/{totalMax}</span>
+            </>
+          }
+          sub={`${analysis.scoreBreakdown.dimensions.length} dimensions`}
+          accent
+        />
+        <MetricTile
+          label="Citation share"
+          value={`${citationShare}%`}
+          sub={`${promptsWithBrand} of ${analysis.citations.length} prompts`}
+        />
+        <MetricTile
+          label="Competitors found"
+          value={research.discoveredCompetitors.length}
+          sub="ranked by AI citation freq."
+        />
+        <MetricTile
+          label="Top rival"
+          value={
+            <span className="text-xl font-semibold">{research.selectedCompetitorDomain}</span>
+          }
+          sub={`${research.discoveredCompetitors[0]?.citationCount ?? 0}/${research.discoveredCompetitors[0]?.promptCount ?? 0} citations`}
+        />
+      </div>
+
+      {/* Two-column body */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        {/* Prompts column (wider) */}
+        <section className="space-y-3 rounded-2xl border border-pink-100 bg-white/40 p-5 lg:col-span-3">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-sm font-semibold text-[var(--ink-900)]">
+              Prompts we tested
+            </h3>
+            <span className="text-xs text-[var(--ink-500)]">
+              {analysis.citations[0]?.runs ?? 3}× per prompt
+            </span>
+          </div>
+          <div className="space-y-2">
+            {promptRows.map(({ prompt, citation }, i) => {
+              const brandCited = citation && citation.brandCitedCount > 0;
+              const compCited = citation && citation.competitorCitedCount > 0;
+              return (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 rounded-xl border border-pink-100 bg-white/60 px-3 py-2"
+                >
+                  <span className="mt-0.5 font-mono text-xs text-[var(--ink-500)]">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <p className="flex-1 text-sm text-[var(--ink-900)]">{prompt}</p>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        brandCited
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-rose-100 text-rose-600'
+                      }`}
+                    >
+                      You {brandCited ? '✓' : '✗'}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        compCited
+                          ? 'bg-pink-100 text-pink-700'
+                          : 'bg-neutral-100 text-neutral-500'
+                      }`}
+                    >
+                      Rival {compCited ? '✓' : '✗'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Competitor leaderboard */}
+        <section className="space-y-3 rounded-2xl border border-pink-100 bg-white/40 p-5 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)]">
+            Competitor leaderboard
+          </h3>
+          <p className="text-xs text-[var(--ink-500)]">
+            Domains AI consistently cites in this category.
           </p>
-          <div className="mt-2">{renderMarkdownToReact(research.narrative)}</div>
-        </div>
+          <div className="space-y-2 pt-1">
+            {research.discoveredCompetitors.map((c) => (
+              <CompetitorLeaderboardRow
+                key={c.domain}
+                c={c}
+                selected={c.domain === research.selectedCompetitorDomain}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Narrative card */}
+      {research.narrative && (
+        <section className="rounded-2xl border border-pink-100 bg-white/60 p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full bg-[var(--ink-900)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              Analysis
+            </span>
+            <h3 className="text-sm font-semibold text-[var(--ink-900)]">
+              What this means and what to ship
+            </h3>
+          </div>
+          <div className="prose-tight">{renderMarkdownToReact(research.narrative)}</div>
+        </section>
       )}
-    </section>
+    </div>
   );
 }
 
 function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
   const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
+  const hasResearch = !!analysis.research;
   return (
-    <div className="space-y-12">
-      {analysis.research && <FindingsPanel research={analysis.research} />}
+    <div className="space-y-6">
+      {hasResearch && analysis.research && (
+        <FindingsDashboard research={analysis.research} analysis={analysis} />
+      )}
 
-      {/* Score hero */}
-      <div className="flex flex-col items-start gap-2">
-        <p className="font-mono text-7xl font-bold text-[var(--ink-900)] sm:text-8xl">
-          {analysis.score}
-          <span className="text-3xl text-[var(--ink-500)]">/{totalMax}</span>
-        </p>
-        <p className="text-sm text-[var(--ink-500)]">AI visibility score</p>
-      </div>
+      {/* Score hero — only when there's no research dashboard (manual mode) */}
+      {!hasResearch && (
+        <section className="rounded-2xl border border-pink-100 bg-white/40 p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+            AI visibility score
+          </p>
+          <p className="mt-2 font-mono text-6xl font-bold text-[var(--ink-900)] sm:text-7xl">
+            {analysis.score}
+            <span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
+          </p>
+        </section>
+      )}
 
-      {/* Breakdown */}
-      <section className="max-w-xl space-y-4">
-        {analysis.scoreBreakdown.dimensions.map((d) => (
-          <Bar key={d.dimension} d={d} />
-        ))}
+      {/* Dimension breakdown */}
+      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
+        <h3 className="mb-4 text-sm font-semibold text-[var(--ink-900)]">
+          Score breakdown
+        </h3>
+        <div className="space-y-4">
+          {analysis.scoreBreakdown.dimensions.map((d) => (
+            <Bar key={d.dimension} d={d} />
+          ))}
+        </div>
       </section>
 
-      {/* Citations */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink-900)]">Citations</h2>
+      {/* Citations card */}
+      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)]">
+            Citations — you vs rival
+          </h3>
+          <span className="text-xs text-[var(--ink-500)]">
+            Engine: {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
+          </span>
+        </div>
         <div className="space-y-2">
           {analysis.citations.map((c, i) => (
             <CitationRow key={i} c={c} />
           ))}
         </div>
-        <p className="text-xs text-[var(--ink-500)]">
-          Each prompt run {analysis.citations[0]?.runs ?? 3}× · Engine: {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
-        </p>
       </section>
 
-      {/* Issues */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink-900)]">Issues</h2>
+      {/* Issues card */}
+      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
+        <h3 className="mb-3 text-sm font-semibold text-[var(--ink-900)]">Top issues</h3>
         <ul className="space-y-2">
           {analysis.issues.map((iss, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm">
-              <span className={`mt-0.5 text-xs font-semibold uppercase ${severity(iss.severity)}`}>
+            <li
+              key={i}
+              className="flex items-start gap-3 rounded-xl border border-pink-100 bg-white/60 px-3 py-2 text-sm"
+            >
+              <span
+                className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                  iss.severity === 'high'
+                    ? 'bg-rose-100 text-rose-700'
+                    : iss.severity === 'medium'
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-emerald-100 text-emerald-700'
+                }`}
+              >
                 {iss.severity}
               </span>
-              <span className="text-[var(--ink-700)]">{iss.title}</span>
+              <div className="space-y-0.5">
+                <p className="font-medium text-[var(--ink-900)]">{iss.title}</p>
+                <p className="text-xs text-[var(--ink-500)]">{iss.why}</p>
+              </div>
             </li>
           ))}
         </ul>
