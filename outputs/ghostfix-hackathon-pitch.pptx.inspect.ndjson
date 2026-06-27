@@ -1,0 +1,210 @@
+{"kind":"deck","id":"pr/pq8wij","name":"Deck"}
+{"kind":"layout","layoutId":"9762a1ca-5e50-4476-80ac-de2b431df073","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"2e12439d-05a9-49cf-b873-4a33e69a3eaf","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/ct13rz","slide":1,"title":"GhostFix","textShapes":11}
+{"kind":"textbox","id":"sh/fepkzupw","slide":1,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/4zidonyd","slide":1,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[78,174,720,74]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":1,"text":"AI visibility diagnosis and repair for brands losing citations to competitors.","textPreview":"AI visibility diagnosis and repair for brands losing citations to competitors.","textChars":78,"textLines":1,"bbox":[82,264,650,72]}
+{"kind":"shape","id":"sh/mlkjm1cf","slide":1,"bbox":[84,366,170,30]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":1,"text":"HACKATHON PITCH","textPreview":"HACKATHON PITCH","textChars":15,"textLines":1,"bbox":[84,371,170,18]}
+{"kind":"shape","id":"sh/4r65wjud","slide":1,"bbox":[780,132,386,392]}
+{"kind":"shape","id":"sh/xc3ylc7u","slide":1,"bbox":[804,156,338,52]}
+{"kind":"shape","id":"sh/m94fu18j","slide":1,"bbox":[822,173,12,12]}
+{"kind":"shape","id":"sh/fu18jqh0","slide":1,"bbox":[844,173,12,12]}
+{"kind":"shape","id":"sh/r65wjudg","slide":1,"bbox":[866,173,12,12]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":1,"bbox":[906,168,212,28]}
+{"kind":"textbox","id":"sh/9cvixcze","slide":1,"text":"ghostfix.app/analyze","textPreview":"ghostfix.app/analyze","textChars":20,"textLines":1,"bbox":[932,174,250,16]}
+{"kind":"shape","id":"sh/gr2p8nqx","slide":1,"bbox":[828,238,110,30]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":1,"text":"RESEARCH","textPreview":"RESEARCH","textChars":8,"textLines":1,"bbox":[828,243,110,18]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":1,"text":"AI visibility score","textPreview":"AI visibility score","textChars":19,"textLines":1,"bbox":[828,296,250,26]}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":1,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[828,326,116,62]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":1,"text":"/100","textPreview":"/100","textChars":4,"textLines":1,"bbox":[920,350,90,28]}
+{"kind":"shape","id":"sh/rmhk3q5o","slide":1,"bbox":[828,416,292,54]}
+{"kind":"textbox","id":"sh/y1kre1w7","slide":1,"text":"vs. competitor citations","textPreview":"vs. competitor citations","textChars":24,"textLines":1,"bbox":[852,432,230,20]}
+{"kind":"textbox","id":"sh/6dcbulwv","slide":1,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"notes","id":"nt/ct13rz","slide":1,"text":""}
+{"kind":"slide","id":"sl/wnsxti","slide":2,"title":"GhostFix","textShapes":11}
+{"kind":"textbox","id":"sh/donyd0z6","slide":2,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":2,"text":"PROBLEM","textPreview":"PROBLEM","textChars":7,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/vixczed8","slide":2,"text":"Search behavior changed. Tooling did not.","textPreview":"Search behavior changed. Tooling did not.","textChars":41,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":2,"text":"Companies optimized content for search links. Buyers now ask AI assistants for answers.","textPreview":"Companies optimized content for search links. Buyers now ask AI assistants for answers.","textChars":87,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/6psfil0r","slide":2,"bbox":[90,302,320,192]}
+{"kind":"textbox","id":"sh/val87ed8","slide":2,"text":"Before","textPreview":"Before","textChars":6,"textLines":1,"bbox":[120,332,200,28]}
+{"kind":"textbox","id":"sh/knih4byh","slide":2,"text":"Rank pages.\nWin clicks.\nOptimize snippets.","textPreview":"Rank pages. | Win clicks. | Optimize snippets.","textChars":42,"textLines":3,"bbox":[120,386,240,92]}
+{"kind":"shape","id":"sh/d8bat47y","slide":2,"bbox":[431,397,2,2]}
+{"kind":"shape","id":"sh/pkzupwb2","slide":2,"bbox":[531,397,2,2]}
+{"kind":"shape","id":"sh/0z61032l","slide":2,"bbox":[433,398,98,0]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":2,"bbox":[560,270,366,256]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":2,"text":"Now","textPreview":"Now","textChars":3,"textLines":1,"bbox":[596,302,160,28]}
+{"kind":"textbox","id":"sh/p8nqxs72","slide":2,"text":"Users ask AI:","textPreview":"Users ask AI:","textChars":13,"textLines":1,"bbox":[596,348,180,26]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":2,"text":"“Best CRM for startups”\n“Compare analytics tools”\n“What email API should I use?”","textPreview":"“Best CRM for startups” | “Compare analytics tools” | “What email API should I use?”","textChars":80,"textLines":3,"bbox":[596,394,292,96]}
+{"kind":"shape","id":"sh/72x4nap4","slide":2,"bbox":[958,302,200,192]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":2,"text":"AI selects\nwho gets\ncited.","textPreview":"AI selects | who gets | cited.","textChars":26,"textLines":3,"bbox":[990,346,146,108]}
+{"kind":"notes","id":"nt/wnsxti","slide":2,"text":""}
+{"kind":"slide","id":"sl/qyemly","slide":3,"title":"GhostFix","textShapes":13}
+{"kind":"textbox","id":"sh/rytsvu9k","slide":3,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/gfmlkjm1","slide":3,"text":"WHY NOW","textPreview":"WHY NOW","textChars":7,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/90je9cvi","slide":3,"text":"Losing the answer means losing the buyer.","textPreview":"Losing the answer means losing the buyer.","textChars":41,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/y1kre1w7","slide":3,"text":"AI systems generate answers and cite selected sources. Brands outside the answer lose the moment of discovery.","textPreview":"AI systems generate answers and cite selected sources. Brands outside the answer lose the moment of discovery.","textChars":110,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/rmhk3q5o","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/g7adsji5","slide":3,"bbox":[84,310,500,104]}
+{"kind":"textbox","id":"sh/9s36hcrm","slide":3,"text":"Reduced discovery","textPreview":"Reduced discovery","textChars":17,"textLines":1,"bbox":[112,332,400,26]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":3,"text":"Fewer buyers ever reach the site.","textPreview":"Fewer buyers ever reach the site.","textChars":33,"textLines":1,"bbox":[112,368,420,24]}
+{"kind":"shape","id":"sh/nih4byhg","slide":3,"bbox":[642,310,500,104]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":3,"text":"Declining inbound traffic","textPreview":"Declining inbound traffic","textChars":25,"textLines":1,"bbox":[670,332,400,26]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":3,"text":"Traditional SEO visibility no longer maps to AI answers.","textPreview":"Traditional SEO visibility no longer maps to AI answers.","textChars":56,"textLines":1,"bbox":[670,368,420,24]}
+{"kind":"shape","id":"sh/p8nqxs72","slide":3,"bbox":[84,454,500,104]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":3,"text":"Lower conversion opportunities","textPreview":"Lower conversion opportunities","textChars":30,"textLines":1,"bbox":[112,476,400,26]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":3,"text":"Competitors frame the shortlist before the user clicks.","textPreview":"Competitors frame the shortlist before the user clicks.","textChars":55,"textLines":1,"bbox":[112,512,420,24]}
+{"kind":"shape","id":"sh/itgfmlkj","slide":3,"bbox":[642,454,500,104]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":3,"text":"No explanation layer","textPreview":"No explanation layer","textChars":20,"textLines":1,"bbox":[670,476,400,26]}
+{"kind":"textbox","id":"sh/0z61032l","slide":3,"text":"Teams cannot see why rivals are referenced instead.","textPreview":"Teams cannot see why rivals are referenced instead.","textChars":51,"textLines":1,"bbox":[670,512,420,24]}
+{"kind":"notes","id":"nt/qyemly","slide":3,"text":""}
+{"kind":"slide","id":"sl/y3r90h","slide":4,"title":"GhostFix","textShapes":11}
+{"kind":"textbox","id":"sh/t47y1kre","slide":4,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":4,"text":"SOLUTION","textPreview":"SOLUTION","textChars":8,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":4,"text":"GhostFix explains why competitors win AI citations.","textPreview":"GhostFix explains why competitors win AI citations.","textChars":51,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":4,"text":"Then it turns the diagnosis into fixes teams can review, approve, and deploy.","textPreview":"Then it turns the diagnosis into fixes teams can review, approve, and deploy.","textChars":77,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":4,"bbox":[80,292,516,260]}
+{"kind":"shape","id":"sh/b6xkf6dc","slide":4,"bbox":[112,324,112,30]}
+{"kind":"textbox","id":"sh/032lszqt","slide":4,"text":"DIAGNOSIS","textPreview":"DIAGNOSIS","textChars":9,"textLines":1,"bbox":[112,329,112,18]}
+{"kind":"textbox","id":"sh/tovahoza","slide":4,"text":"Compares your site against the rival AI recommends.","textPreview":"Compares your site against the rival AI recommends.","textChars":51,"textLines":1,"bbox":[112,378,400,60]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":4,"text":"Finds citation gaps across answer share, content coverage, structured data, evidence density, freshness, and trust.","textPreview":"Finds citation gaps across answer share, content coverage, structured data, evidence density, freshness, and trust.","textChars":115,"textLines":1,"bbox":[112,462,404,52]}
+{"kind":"shape","id":"sh/sneloj2t","slide":4,"bbox":[654,292,516,260]}
+{"kind":"shape","id":"sh/32lszqtc","slide":4,"bbox":[686,324,86,30]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":4,"text":"REPAIR","textPreview":"REPAIR","textChars":6,"textLines":1,"bbox":[686,329,86,18]}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":4,"text":"Generates content and schema drafts ready for human review.","textPreview":"Generates content and schema drafts ready for human review.","textChars":59,"textLines":1,"bbox":[686,378,410,68]}
+{"kind":"textbox","id":"sh/szqtcj6t","slide":4,"text":"FAQ, comparison page, JSON-LD, and PR-ready deployment artifacts.","textPreview":"FAQ, comparison page, JSON-LD, and PR-ready deployment artifacts.","textChars":65,"textLines":1,"bbox":[686,462,384,52]}
+{"kind":"notes","id":"nt/y3r90h","slide":4,"text":""}
+{"kind":"slide","id":"sl/qeehpa","slide":5,"title":"GhostFix","textShapes":20}
+{"kind":"textbox","id":"sh/ed8v6psf","slide":5,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/p4r65wju","slide":5,"text":"PRODUCT FLOW","textPreview":"PRODUCT FLOW","textChars":12,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/wjudg7ad","slide":5,"text":"Observe → Explain → Recommend → Approve → Deploy","textPreview":"Observe → Explain → Recommend → Approve → Deploy","textChars":48,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/7qpg3ex0","slide":5,"text":"A practical loop for AI answer optimization, built around review and control.","textPreview":"A practical loop for AI answer optimization, built around review and control.","textChars":77,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/i5sneloj","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/pwb2hwfy","slide":5,"bbox":[74,332,178,150]}
+{"kind":"textbox","id":"sh/0bi9s36h","slide":5,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[98,358,40,20]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":5,"text":"Observe","textPreview":"Observe","textChars":7,"textLines":1,"bbox":[98,390,130,30]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":5,"text":"Collect prompts, citations, competitors.","textPreview":"Collect prompts, citations, competitors.","textChars":40,"textLines":1,"bbox":[98,434,126,42]}
+{"kind":"shape","id":"sh/cvixczed","slide":5,"bbox":[251,407,2,2]}
+{"kind":"shape","id":"sh/5gbq1ory","slide":5,"bbox":[293,407,2,2]}
+{"kind":"shape","id":"sh/upwb2hwf","slide":5,"bbox":[253,408,40,0]}
+{"kind":"shape","id":"sh/nap4r65w","slide":5,"bbox":[304,332,178,150]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":5,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[328,358,40,20]}
+{"kind":"textbox","id":"sh/54zidony","slide":5,"text":"Explain","textPreview":"Explain","textChars":7,"textLines":1,"bbox":[328,390,130,30]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":5,"text":"Score the gaps and show why.","textPreview":"Score the gaps and show why.","textChars":28,"textLines":1,"bbox":[328,434,126,42]}
+{"kind":"shape","id":"sh/nyd0z610","slide":5,"bbox":[481,407,2,2]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":5,"bbox":[523,407,2,2]}
+{"kind":"shape","id":"sh/1032lszq","slide":5,"bbox":[483,408,40,0]}
+{"kind":"shape","id":"sh/5sneloj2","slide":5,"bbox":[534,332,178,150]}
+{"kind":"textbox","id":"sh/cbulwval","slide":5,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[558,358,40,20]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":5,"text":"Recommend","textPreview":"Recommend","textChars":9,"textLines":1,"bbox":[558,390,130,30]}
+{"kind":"textbox","id":"sh/u54zidon","slide":5,"text":"Draft fixes tied to issues.","textPreview":"Draft fixes tied to issues.","textChars":27,"textLines":1,"bbox":[558,434,126,42]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":5,"bbox":[711,407,2,2]}
+{"kind":"shape","id":"sh/czed8v6p","slide":5,"bbox":[753,407,2,2]}
+{"kind":"shape","id":"sh/neloj2t8","slide":5,"bbox":[713,408,40,0]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":5,"bbox":[764,332,178,150]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":5,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[788,358,40,20]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":5,"text":"Approve","textPreview":"Approve","textChars":7,"textLines":1,"bbox":[788,390,130,30]}
+{"kind":"textbox","id":"sh/qpg3ex0n","slide":5,"text":"Human review stays in the loop.","textPreview":"Human review stays in the loop.","textChars":31,"textLines":1,"bbox":[788,434,126,42]}
+{"kind":"shape","id":"sh/fa9w3m94","slide":5,"bbox":[941,407,2,2]}
+{"kind":"shape","id":"sh/8v6psfil","slide":5,"bbox":[983,407,2,2]}
+{"kind":"shape","id":"sh/xczed8v6","slide":5,"bbox":[943,408,40,0]}
+{"kind":"shape","id":"sh/qd4vmtwr","slide":5,"bbox":[994,332,178,150]}
+{"kind":"textbox","id":"sh/fyxobm58","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1018,358,40,20]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":5,"text":"Deploy","textPreview":"Deploy","textChars":6,"textLines":1,"bbox":[1018,390,130,30]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":5,"text":"Open a PR with repair files.","textPreview":"Open a PR with repair files.","textChars":28,"textLines":1,"bbox":[1018,434,126,42]}
+{"kind":"notes","id":"nt/qeehpa","slide":5,"text":""}
+{"kind":"slide","id":"sl/5qilrc","slide":6,"title":"GhostFix","textShapes":17}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":6,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":6,"text":"BUILD","textPreview":"BUILD","textChars":5,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":6,"text":"Technical architecture","textPreview":"Technical architecture","textChars":22,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":6,"text":"A small pipeline that turns one brand URL into an explainable diagnosis and deployable fixes.","textPreview":"A small pipeline that turns one brand URL into an explainable diagnosis and deployable fixes.","textChars":93,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":6,"bbox":[72,304,318,92]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":6,"text":"Brand URL","textPreview":"Brand URL","textChars":9,"textLines":1,"bbox":[96,322,220,28]}
+{"kind":"textbox","id":"sh/b2hwfyxo","slide":6,"text":"Input","textPreview":"Input","textChars":5,"textLines":1,"bbox":[96,356,252,20]}
+{"kind":"shape","id":"sh/mhk3q5o7","slide":6,"bbox":[458,304,318,92]}
+{"kind":"textbox","id":"sh/0z61032l","slide":6,"text":"Research","textPreview":"Research","textChars":8,"textLines":1,"bbox":[482,322,220,28]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":6,"text":"Groq-first prompts + competitors","textPreview":"Groq-first prompts + competitors","textChars":32,"textLines":1,"bbox":[482,356,252,20]}
+{"kind":"shape","id":"sh/itgfmlkj","slide":6,"bbox":[844,304,318,92]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":6,"text":"Crawler","textPreview":"Crawler","textChars":7,"textLines":1,"bbox":[868,322,220,28]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":6,"text":"Site signals + JSON-LD","textPreview":"Site signals + JSON-LD","textChars":22,"textLines":1,"bbox":[868,356,252,20]}
+{"kind":"shape","id":"sh/p8nqxs72","slide":6,"bbox":[72,454,318,92]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":6,"text":"Scoring","textPreview":"Scoring","textChars":7,"textLines":1,"bbox":[96,472,220,28]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":6,"text":"Explainable rubric","textPreview":"Explainable rubric","textChars":18,"textLines":1,"bbox":[96,506,252,20]}
+{"kind":"shape","id":"sh/wjudg7ad","slide":6,"bbox":[458,454,318,92]}
+{"kind":"textbox","id":"sh/p4r65wju","slide":6,"text":"Repair agent","textPreview":"Repair agent","textChars":12,"textLines":1,"bbox":[482,472,220,28]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":6,"text":"FAQ, comparison, schema","textPreview":"FAQ, comparison, schema","textChars":23,"textLines":1,"bbox":[482,506,252,20]}
+{"kind":"shape","id":"sh/gvy90je9","slide":6,"bbox":[844,454,318,92]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":6,"text":"GitHub PR","textPreview":"GitHub PR","textChars":9,"textLines":1,"bbox":[868,472,220,28]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":6,"text":"Review-gated deploy","textPreview":"Review-gated deploy","textChars":19,"textLines":1,"bbox":[868,506,252,20]}
+{"kind":"shape","id":"sh/94fu18jq","slide":6,"bbox":[389,349,2,2]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":6,"bbox":[457,349,2,2]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":6,"bbox":[391,350,66,0]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":6,"bbox":[775,349,2,2]}
+{"kind":"shape","id":"sh/9w3m94fu","slide":6,"bbox":[843,349,2,2]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":6,"bbox":[777,350,66,0]}
+{"kind":"shape","id":"sh/u9knih4b","slide":6,"bbox":[1003,395,2,2]}
+{"kind":"shape","id":"sh/judg7ads","slide":6,"bbox":[1003,453,2,2]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":6,"bbox":[1004,397,0,56]}
+{"kind":"shape","id":"sh/1032lszq","slide":6,"bbox":[843,499,2,2]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":6,"bbox":[775,499,2,2]}
+{"kind":"shape","id":"sh/jm1cfa9w","slide":6,"bbox":[777,500,66,0]}
+{"kind":"shape","id":"sh/c7u54zid","slide":6,"bbox":[457,499,2,2]}
+{"kind":"shape","id":"sh/1orytsvu","slide":6,"bbox":[389,499,2,2]}
+{"kind":"shape","id":"sh/upwb2hwf","slide":6,"bbox":[391,500,66,0]}
+{"kind":"notes","id":"nt/5qilrc","slide":6,"text":""}
+{"kind":"slide","id":"sl/nui1ug","slide":7,"title":"GhostFix","textShapes":11}
+{"kind":"textbox","id":"sh/zqtcj6to","slide":7,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/obm58z25","slide":7,"text":"BUSINESS MODEL","textPreview":"BUSINESS MODEL","textChars":14,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":7,"text":"Subscription software for teams that depend on inbound discovery.","textPreview":"Subscription software for teams that depend on inbound discovery.","textChars":65,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/6xkf6dcb","slide":7,"text":"Target customers are already paying for SEO, content, and performance marketing, but lack AI-answer visibility.","textPreview":"Target customers are already paying for SEO, content, and performance marketing, but lack AI-answer visibility.","textChars":111,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/zed8v6ps","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/oza1gvy9","slide":7,"bbox":[86,306,336,218]}
+{"kind":"textbox","id":"sh/hk3q5o7q","slide":7,"text":"Target audience","textPreview":"Target audience","textChars":15,"textLines":1,"bbox":[118,338,240,28]}
+{"kind":"textbox","id":"sh/al87ed8b","slide":7,"text":"B2B SaaS\nGrowth teams\nContent marketers\nFounders","textPreview":"B2B SaaS | Growth teams | Content marketers | Founders","textChars":48,"textLines":4,"bbox":[118,390,230,96]}
+{"kind":"shape","id":"sh/z61032ls","slide":7,"bbox":[472,306,336,218]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":7,"text":"Pricing","textPreview":"Pricing","textChars":7,"textLines":1,"bbox":[504,338,220,28]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":7,"text":"Monthly subscription\nUsage tiers by domains,\nprompts, and PR repairs.","textPreview":"Monthly subscription | Usage tiers by domains, | prompts, and PR repairs.","textChars":69,"textLines":3,"bbox":[504,392,230,88]}
+{"kind":"shape","id":"sh/hgn29gr2","slide":7,"bbox":[858,306,336,218]}
+{"kind":"textbox","id":"sh/svu9knih","slide":7,"text":"Expansion","textPreview":"Expansion","textChars":9,"textLines":1,"bbox":[890,338,220,28]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":7,"text":"Monitoring\nTeam workflows\nCMS/Git integrations","textPreview":"Monitoring | Team workflows | CMS/Git integrations","textChars":46,"textLines":3,"bbox":[890,394,230,82]}
+{"kind":"notes","id":"nt/nui1ug","slide":7,"text":""}
+{"kind":"slide","id":"sl/h0w9t9","slide":8,"title":"GhostFix","textShapes":19}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":8,"text":"GhostFix","textPreview":"GhostFix","textChars":8,"textLines":1,"bbox":[74,45,180,26]}
+{"kind":"textbox","id":"sh/wjudg7ad","slide":8,"text":"DEMO","textPreview":"DEMO","textChars":4,"textLines":1,"bbox":[925,48,280,22]}
+{"kind":"textbox","id":"sh/p4r65wju","slide":8,"text":"Demo: from URL to repair PR","textPreview":"Demo: from URL to repair PR","textChars":27,"textLines":1,"bbox":[74,104,760,98]}
+{"kind":"textbox","id":"sh/i5sneloj","slide":8,"text":"Show the product loop live: analyze a brand, inspect the competitor gap, generate fixes, and open a review-gated PR.","textPreview":"Show the product loop live: analyze a brand, inspect the competitor gap, generate fixes, and open a review-gated PR.","textChars":116,"textLines":1,"bbox":[76,198,700,62]}
+{"kind":"textbox","id":"sh/7qpg3ex0","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1150,646,60,20]}
+{"kind":"shape","id":"sh/0bi9s36h","slide":8,"bbox":[96,282,1088,284]}
+{"kind":"shape","id":"sh/pwb2hwfy","slide":8,"bbox":[126,314,1028,52]}
+{"kind":"shape","id":"sh/itgfmlkj","slide":8,"bbox":[144,331,12,12]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":8,"bbox":[166,331,12,12]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":8,"bbox":[188,331,12,12]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":8,"bbox":[228,326,902,28]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":8,"text":"ghostfix.app/analyze","textPreview":"ghostfix.app/analyze","textChars":20,"textLines":1,"bbox":[254,332,250,16]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":8,"bbox":[148,404,206,110]}
+{"kind":"shape","id":"sh/ra5gbq1o","slide":8,"bbox":[168,426,34,30]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":8,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[168,431,34,18]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":8,"text":"Enter brand URL","textPreview":"Enter brand URL","textChars":15,"textLines":1,"bbox":[214,426,116,24]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":8,"text":"GhostFix researches prompts and rivals.","textPreview":"GhostFix researches prompts and rivals.","textChars":39,"textLines":1,"bbox":[170,468,162,32]}
+{"kind":"shape","id":"sh/re1w7mp0","slide":8,"bbox":[396,404,206,110]}
+{"kind":"shape","id":"sh/2t83itgf","slide":8,"bbox":[416,426,34,30]}
+{"kind":"textbox","id":"sh/qpg3ex0n","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[416,431,34,18]}
+{"kind":"textbox","id":"sh/fa9w3m94","slide":8,"text":"Review diagnosis","textPreview":"Review diagnosis","textChars":16,"textLines":1,"bbox":[462,426,116,24]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":8,"text":"See why AI cites competitors.","textPreview":"See why AI cites competitors.","textChars":29,"textLines":1,"bbox":[418,468,162,32]}
+{"kind":"shape","id":"sh/xczed8v6","slide":8,"bbox":[644,404,206,110]}
+{"kind":"shape","id":"sh/qd4vmtwr","slide":8,"bbox":[664,426,34,30]}
+{"kind":"textbox","id":"sh/fyxobm58","slide":8,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[664,431,34,18]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":8,"text":"Generate fixes","textPreview":"Generate fixes","textChars":14,"textLines":1,"bbox":[710,426,116,24]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":8,"text":"FAQ, comparison, and schema drafts.","textPreview":"FAQ, comparison, and schema drafts.","textChars":35,"textLines":1,"bbox":[666,468,162,32]}
+{"kind":"shape","id":"sh/q1orytsv","slide":8,"bbox":[892,404,206,110]}
+{"kind":"shape","id":"sh/fmlkjm1c","slide":8,"bbox":[912,426,34,30]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":8,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[912,431,34,18]}
+{"kind":"textbox","id":"sh/cbulwval","slide":8,"text":"Open PR","textPreview":"Open PR","textChars":7,"textLines":1,"bbox":[958,426,116,24]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":8,"text":"Approve before anything ships.","textPreview":"Approve before anything ships.","textChars":30,"textLines":1,"bbox":[914,468,162,32]}
+{"kind":"textbox","id":"sh/u54zidon","slide":8,"text":"Close: AI visibility is becoming a measurable, repairable workflow.","textPreview":"Close: AI visibility is becoming a measurable, repairable workflow.","textChars":67,"textLines":1,"bbox":[122,604,760,26]}
+{"kind":"notes","id":"nt/h0w9t9","slide":8,"text":""}

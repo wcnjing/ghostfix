@@ -111,7 +111,7 @@ function StepIndicator({ step }: { step: Step }) {
   );
 }
 
-function Header({ step, ghUser }: { step: Step; ghUser: GhUser | null }) {
+function Header({ step, ghUser, onLogout }: { step: Step; ghUser: GhUser | null; onLogout: () => void }) {
   return (
     <header className="mb-16 flex items-center justify-between gap-4">
       <span className="text-sm font-semibold tracking-tight text-[var(--ink-900)]">
@@ -130,6 +130,13 @@ function Header({ step, ghUser }: { step: Step; ghUser: GhUser | null }) {
               />
             )}
             @{ghUser.login}
+            <button
+              onClick={onLogout}
+              className="ml-1 text-[var(--ink-500)] hover:text-[var(--pink-600)]"
+              title="Log out from GitHub"
+            >
+              ✕
+            </button>
           </span>
         )}
       </div>
@@ -1046,7 +1053,7 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10 sm:px-10 sm:py-14">
-      <Header step={step} ghUser={ghUser} />
+      <Header step={step} ghUser={ghUser} onLogout={disconnect} />
 
       {error && (
         <p className="mb-8 text-sm text-rose-600">{error}</p>
