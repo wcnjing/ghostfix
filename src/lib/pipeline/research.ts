@@ -1,10 +1,11 @@
 // Research mode: starting from just a brand URL, auto-discover the prompts
 // customers actually ask AI in that category and the competitors AI consistently
-// recommends. Falls back to deterministic stubs when LLM/Perplexity keys are
+// recommends. Falls back to deterministic stubs when LLM keys are
 // missing so the demo still produces a coherent dashboard.
 
 import * as cheerio from 'cheerio';
 
+import { config } from '@/lib/config';
 import { generateJson, generateText } from '@/lib/llm';
 import type {
   AnalysisResult,
@@ -13,11 +14,7 @@ import type {
   ResearchFindings,
 } from '@/lib/types';
 
-const FETCH_TIMEOUT_MS = 8000;
-const UA =
-  'Mozilla/5.0 (compatible; GhostfixBot/0.1; +https://ghostfix.local) Chrome/120 Safari/537.36';
 const PPLX_URL = 'https://api.perplexity.ai/chat/completions';
-const PPLX_MODEL = 'sonar';
 
 function domainOf(input: string): string {
   try {
@@ -37,10 +34,10 @@ interface BrandSummary {
 async function fetchBrandSummary(url: string): Promise<BrandSummary> {
   const domain = domainOf(url);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
   try {
     const res = await fetch(url, {
-      headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml' },
+      headers: { 'user-agent': config.userAgent, accept: 'text/html,application/xhtml+xml' },
       redirect: 'follow',
       signal: controller.signal,
     });
@@ -125,7 +122,7 @@ async function summarizeAndDiscoverPrompts(
   return fallback;
 }
 
-// ─── Competitor discovery via Perplexity ─────────────────────────────────────
+// ─── Competitor discovery ────────────────────────────────────────────────────
 
 interface PplxResp {
   search_results?: { url?: string; title?: string }[];
@@ -145,7 +142,7 @@ async function pplxOnePrompt(apiKey: string, prompt: string): Promise<PromptCita
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: PPLX_MODEL,
+        model: config.perplexityModel,
         messages: [{ role: 'user', content: prompt }],
         return_citations: true,
       }),
@@ -196,38 +193,269 @@ const IGNORE_DOMAINS = new Set([
   'stackoverflow.com',
 ]);
 
+const FALLBACK_COMPETITORS_BY_CATEGORY: {
+  match: RegExp;
+  competitors: { domain: string; url: string; sampleTitle: string }[];
+}[] = [
+  {
+    match: /\b(video|streaming|creator|content sharing|short-form|livestream)\b/i,
+    competitors: [
+      {
+        domain: 'vimeo.com',
+        url: 'https://vimeo.com',
+        sampleTitle: 'Vimeo — video hosting and sharing for creators and businesses',
+      },
+      {
+        domain: 'tiktok.com',
+        url: 'https://www.tiktok.com',
+        sampleTitle: 'TikTok — short-form video platform',
+      },
+      {
+        domain: 'twitch.tv',
+        url: 'https://www.twitch.tv',
+        sampleTitle: 'Twitch — live streaming platform',
+      },
+    ],
+  },
+  {
+    match: /\b(project|task|work management|workspace|sprint|issue tracker|planning)\b/i,
+    competitors: [
+      {
+        domain: 'notion.so',
+        url: 'https://www.notion.so',
+        sampleTitle: 'Notion — your all-in-one workspace',
+      },
+      {
+        domain: 'asana.com',
+        url: 'https://asana.com',
+        sampleTitle: 'Asana — work management for teams',
+      },
+      {
+        domain: 'monday.com',
+        url: 'https://monday.com',
+        sampleTitle: 'monday.com — work OS',
+      },
+    ],
+  },
+  {
+    match: /\b(crm|sales|pipeline|customer relationship)\b/i,
+    competitors: [
+      {
+        domain: 'salesforce.com',
+        url: 'https://www.salesforce.com',
+        sampleTitle: 'Salesforce — CRM software',
+      },
+      {
+        domain: 'hubspot.com',
+        url: 'https://www.hubspot.com',
+        sampleTitle: 'HubSpot — CRM platform',
+      },
+      {
+        domain: 'zoho.com',
+        url: 'https://www.zoho.com/crm',
+        sampleTitle: 'Zoho CRM — sales CRM software',
+      },
+    ],
+  },
+  {
+    match: /\b(email|newsletter|marketing automation|campaign)\b/i,
+    competitors: [
+      {
+        domain: 'mailchimp.com',
+        url: 'https://mailchimp.com',
+        sampleTitle: 'Mailchimp — email marketing platform',
+      },
+      {
+        domain: 'klaviyo.com',
+        url: 'https://www.klaviyo.com',
+        sampleTitle: 'Klaviyo — marketing automation',
+      },
+      {
+        domain: 'constantcontact.com',
+        url: 'https://www.constantcontact.com',
+        sampleTitle: 'Constant Contact — email marketing',
+      },
+    ],
+  },
+];
+
+const PROMPT_BRANDS: Record<string, { domain: string; url: string; sampleTitle: string }> = {
+  vimeo: {
+    domain: 'vimeo.com',
+    url: 'https://vimeo.com',
+    sampleTitle: 'Vimeo — video hosting and sharing',
+  },
+  tiktok: {
+    domain: 'tiktok.com',
+    url: 'https://www.tiktok.com',
+    sampleTitle: 'TikTok — short-form video platform',
+  },
+  twitch: {
+    domain: 'twitch.tv',
+    url: 'https://www.twitch.tv',
+    sampleTitle: 'Twitch — live streaming platform',
+  },
+  dailymotion: {
+    domain: 'dailymotion.com',
+    url: 'https://www.dailymotion.com',
+    sampleTitle: 'Dailymotion — video sharing platform',
+  },
+  notion: {
+    domain: 'notion.so',
+    url: 'https://www.notion.so',
+    sampleTitle: 'Notion — your all-in-one workspace',
+  },
+  asana: {
+    domain: 'asana.com',
+    url: 'https://asana.com',
+    sampleTitle: 'Asana — work management for teams',
+  },
+  monday: {
+    domain: 'monday.com',
+    url: 'https://monday.com',
+    sampleTitle: 'monday.com — work OS',
+  },
+  jira: {
+    domain: 'atlassian.com',
+    url: 'https://www.atlassian.com/software/jira',
+    sampleTitle: 'Jira — issue and project tracking',
+  },
+  trello: {
+    domain: 'trello.com',
+    url: 'https://trello.com',
+    sampleTitle: 'Trello — visual project management',
+  },
+};
+
+function fallbackCompetitors(
+  prompts: string[],
+  brandDomain: string,
+  category: string,
+): DiscoveredCompetitor[] {
+  const promptText = prompts.join(' ').toLowerCase();
+  const byDomain = new Map<
+    string,
+    { domain: string; url: string; sampleTitle: string; promptHits: number }
+  >();
+
+  for (const [brand, competitor] of Object.entries(PROMPT_BRANDS)) {
+    if (!promptText.includes(brand)) continue;
+    if (competitor.domain === brandDomain) continue;
+    byDomain.set(competitor.domain, {
+      ...competitor,
+      promptHits: prompts.filter((prompt) => prompt.toLowerCase().includes(brand)).length,
+    });
+  }
+
+  const categoryMatch = FALLBACK_COMPETITORS_BY_CATEGORY.find((entry) =>
+    entry.match.test(`${category} ${promptText}`),
+  );
+  for (const competitor of categoryMatch?.competitors ?? []) {
+    if (competitor.domain === brandDomain || byDomain.has(competitor.domain)) continue;
+    byDomain.set(competitor.domain, {
+      ...competitor,
+      promptHits: 0,
+    });
+  }
+
+  return Array.from(byDomain.values())
+    .map((competitor, index) => ({
+      domain: competitor.domain,
+      url: competitor.url,
+      citationCount: Math.max(1, prompts.length - index - (competitor.promptHits > 0 ? 0 : 1)),
+      promptCount: prompts.length,
+      sampleTitle: competitor.sampleTitle,
+    }))
+    .sort((a, b) => b.citationCount - a.citationCount)
+    .slice(0, 5);
+}
+
+interface LlmCompetitor {
+  domain: string;
+  url: string;
+  citationCount?: number;
+  sampleTitle?: string;
+}
+
+interface LlmCompetitorOutput {
+  competitors: LlmCompetitor[];
+}
+
+function normalizeCompetitorUrl(domain: string, url: unknown): string {
+  if (typeof url === 'string') {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.toString();
+    } catch {
+      // Fall through to domain URL.
+    }
+  }
+  return `https://${domain}`;
+}
+
+async function discoverCompetitorsViaLlm(
+  brand: BrandSummary,
+  category: string,
+  summary: string,
+  prompts: string[],
+): Promise<DiscoveredCompetitor[] | null> {
+  const result = await generateJson<LlmCompetitorOutput>(
+    [
+      `You're choosing realistic competitors for an AI-visibility analysis.`,
+      `Use your general market knowledge and the supplied prompts. Do not default to project-management brands unless this is actually a project-management category.`,
+      ``,
+      `Brand domain: ${brand.domain}`,
+      `Brand title: ${brand.title}`,
+      `Brand summary: ${summary}`,
+      `Category: ${category}`,
+      ``,
+      `Customer prompts we will test:`,
+      prompts.map((prompt, i) => `${i + 1}. ${prompt}`).join('\n'),
+      ``,
+      `Return 3-5 direct competitors or close substitutes that an AI answer engine would plausibly mention for these prompts.`,
+      `Exclude the brand domain itself and broad publisher/community/reference domains.`,
+      `citationCount should be an estimated count from 1 to ${prompts.length} for how many of these prompts would plausibly mention that competitor.`,
+    ].join('\n'),
+    `{"competitors":[{"domain":"example.com","url":"https://example.com","citationCount":3,"sampleTitle":"Example — short description"}]}`,
+  );
+
+  if (!result || !Array.isArray(result.competitors)) return null;
+
+  const seen = new Set<string>();
+  const competitors: DiscoveredCompetitor[] = [];
+  for (const item of result.competitors) {
+    if (!item || typeof item.domain !== 'string') continue;
+    const domain = domainOf(item.domain);
+    if (!domain || domain === brand.domain || IGNORE_DOMAINS.has(domain) || seen.has(domain)) {
+      continue;
+    }
+    seen.add(domain);
+    const citationCount =
+      typeof item.citationCount === 'number'
+        ? Math.min(prompts.length, Math.max(1, Math.round(item.citationCount)))
+        : Math.max(1, prompts.length - competitors.length - 1);
+    competitors.push({
+      domain,
+      url: normalizeCompetitorUrl(domain, item.url),
+      citationCount,
+      promptCount: prompts.length,
+      sampleTitle: typeof item.sampleTitle === 'string' ? item.sampleTitle : undefined,
+    });
+  }
+
+  return competitors
+    .sort((a, b) => b.citationCount - a.citationCount)
+    .slice(0, 5);
+}
+
 async function discoverCompetitorsViaPerplexity(
   prompts: string[],
   brandDomain: string,
 ): Promise<{ competitors: DiscoveredCompetitor[]; prompts: PromptCitations[] }> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
-    // Mock pattern: pick category-ish placeholder domains. The downstream
-    // pipeline still produces a coherent dashboard.
     return {
-      competitors: [
-        {
-          domain: 'notion.so',
-          url: 'https://www.notion.so',
-          citationCount: 4,
-          promptCount: prompts.length,
-          sampleTitle: 'Notion — your all-in-one workspace',
-        },
-        {
-          domain: 'asana.com',
-          url: 'https://asana.com',
-          citationCount: 3,
-          promptCount: prompts.length,
-          sampleTitle: 'Asana — work management for teams',
-        },
-        {
-          domain: 'monday.com',
-          url: 'https://monday.com',
-          citationCount: 2,
-          promptCount: prompts.length,
-          sampleTitle: 'monday.com — work OS',
-        },
-      ],
+      competitors: [],
       prompts: [],
     };
   }
@@ -344,8 +572,20 @@ export interface ResearchDiscovery {
 export async function discover(brandUrl: string, hint?: string): Promise<ResearchDiscovery> {
   const brand = await fetchBrandSummary(brandUrl);
   const { category, summary, prompts } = await summarizeAndDiscoverPrompts(brand, hint);
-  const { competitors } = await discoverCompetitorsViaPerplexity(prompts, brand.domain);
-  return { brand, category, summary, prompts, competitors };
+  const llmCompetitors = await discoverCompetitorsViaLlm(brand, category, summary, prompts);
+  const competitors =
+    llmCompetitors && llmCompetitors.length > 0
+      ? llmCompetitors
+      : (await discoverCompetitorsViaPerplexity(prompts, brand.domain)).competitors;
+
+  return {
+    brand,
+    category,
+    summary,
+    prompts,
+    competitors:
+      competitors.length > 0 ? competitors : fallbackCompetitors(prompts, brand.domain, category),
+  };
 }
 
 /** Step 2: given a finished analysis, build the narrative findings report. */
