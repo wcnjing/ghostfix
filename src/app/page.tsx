@@ -350,11 +350,11 @@ function CitationRow({ c }: { c: Citation }) {
   const bPct = Math.round(c.brandFrequency * 100);
   const cPct = Math.round(c.competitorFrequency * 100);
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-pink-100 bg-white/50 px-4 py-3">
+    <div className="flex items-center gap-4 border-b border-[#f0f0f0] py-2.5 last:border-0">
       <p className="flex-1 text-sm text-[var(--ink-900)]">{c.prompt}</p>
-      <div className="flex items-center gap-3 text-xs font-mono">
-        <span className="text-[var(--pink-600)]">{bPct}%</span>
-        <span className="text-[var(--ink-500)]">vs</span>
+      <div className="flex items-center gap-2 font-mono text-xs">
+        <span className={bPct > 0 ? 'text-emerald-600' : 'text-rose-500'}>{bPct}%</span>
+        <span className="text-[var(--ink-500)]">/</span>
         <span className="text-[var(--ink-700)]">{cPct}%</span>
       </div>
     </div>
@@ -377,26 +377,16 @@ function MetricTile({
   label,
   value,
   sub,
-  accent,
 }: {
   label: string;
   value: React.ReactNode;
   sub?: React.ReactNode;
-  accent?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        accent
-          ? 'border-pink-200 bg-gradient-to-br from-pink-50 to-white'
-          : 'border-pink-100 bg-white/60'
-      }`}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-        {label}
-      </p>
-      <p className="mt-2 font-mono text-3xl font-bold text-[var(--ink-900)]">{value}</p>
-      {sub && <p className="mt-1 text-xs text-[var(--ink-500)]">{sub}</p>}
+    <div className="py-3">
+      <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">{label}</p>
+      <p className="mt-1 font-mono text-2xl font-bold text-[var(--ink-900)]">{value}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-[var(--ink-500)]">{sub}</p>}
     </div>
   );
 }
@@ -408,37 +398,18 @@ function CompetitorLeaderboardRow({
   c: DiscoveredCompetitor;
   selected: boolean;
 }) {
-  const pct = c.promptCount > 0 ? (c.citationCount / c.promptCount) * 100 : 0;
+  const pct = c.promptCount > 0 ? Math.round((c.citationCount / c.promptCount) * 100) : 0;
   return (
-    <div
-      className={`rounded-xl border p-3 ${
-        selected ? 'border-pink-300 bg-pink-50/60' : 'border-pink-100 bg-white/40'
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <a
-          href={c.url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-2 text-sm font-medium text-[var(--ink-900)] hover:text-[var(--pink-600)]"
-        >
-          {c.domain}
-          {selected && (
-            <span className="rounded-full bg-pink-500 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
-              deep-dive
-            </span>
-          )}
-        </a>
-        <span className="font-mono text-xs text-[var(--ink-700)]">
-          {c.citationCount}/{c.promptCount}
-        </span>
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-[var(--ink-900)]">{c.domain}</span>
+        {selected && (
+          <span className="rounded bg-[var(--ink-900)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+            rival
+          </span>
+        )}
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-pink-100">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-400"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <span className="font-mono text-xs text-[var(--ink-500)]">{pct}%</span>
     </div>
   );
 }
@@ -525,63 +496,14 @@ function FindingsDashboard({
     analysis.citations.length > 0
       ? Math.round((promptsWithBrand / analysis.citations.length) * 100)
       : 0;
-  const brandHost = (() => {
-    try {
-      return new URL(analysis.brandUrl).hostname.replace(/^www\./, '');
-    } catch {
-      return analysis.brandUrl;
-    }
-  })();
-
-  // Pair each prompt with its citation row (same order — guaranteed by the API).
-  const promptRows = analysis.prompts.map((prompt, i) => ({
-    prompt,
-    citation: analysis.citations[i],
-  }));
 
   return (
-    <div className="space-y-6">
-      {/* Header strip */}
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-pink-100 bg-white/40 px-5 py-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-pink-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-              Research
-            </span>
-            <span className="text-sm font-medium text-[var(--ink-900)]">
-              {research.category}
-            </span>
-          </div>
-          <p className="mt-1.5 max-w-2xl text-sm text-[var(--ink-700)]">
-            {research.brandSummary}
-          </p>
-        </div>
-        <div className="flex flex-col items-end text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-            Analyzed
-          </p>
-          <p className="text-sm font-medium text-[var(--ink-900)]">{brandHost}</p>
-          <p className="text-xs text-[var(--ink-500)]">
-            vs.{' '}
-            <span className="font-medium text-[var(--ink-700)]">
-              {research.selectedCompetitorDomain}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      {/* KPI tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="space-y-10">
+      {/* Hero metrics */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
         <MetricTile
-          label="Visibility score"
-          value={
-            <>
-              {analysis.score}
-              <span className="text-base text-[var(--ink-500)]">/{totalMax}</span>
-            </>
-          }
-          sub={`${analysis.scoreBreakdown.dimensions.length} dimensions`}
-          accent
+          label="Score"
+          value={<>{analysis.score}<span className="text-sm text-[var(--ink-500)]">/{totalMax}</span></>}
         />
         <MetricTile
           label="Citation share"
@@ -589,101 +511,61 @@ function FindingsDashboard({
           sub={`${promptsWithBrand} of ${analysis.citations.length} prompts`}
         />
         <MetricTile
-          label="Competitors found"
+          label="Competitors"
           value={research.discoveredCompetitors.length}
-          sub="ranked by AI citation freq."
         />
         <MetricTile
           label="Top rival"
-          value={
-            <span className="text-xl font-semibold">{research.selectedCompetitorDomain}</span>
-          }
-          sub={`${research.discoveredCompetitors[0]?.citationCount ?? 0}/${research.discoveredCompetitors[0]?.promptCount ?? 0} citations`}
+          value={<span className="text-lg">{research.selectedCompetitorDomain}</span>}
         />
       </div>
 
-      {/* Two-column body */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        {/* Prompts column (wider) */}
-        <section className="space-y-3 rounded-2xl border border-pink-100 bg-white/40 p-5 lg:col-span-3">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-sm font-semibold text-[var(--ink-900)]">
-              Prompts we tested
-            </h3>
-            <span className="text-xs text-[var(--ink-500)]">
-              {analysis.citations[0]?.runs ?? 3}× per prompt
-            </span>
-          </div>
-          <div className="space-y-2">
-            {promptRows.map(({ prompt, citation }, i) => {
-              const brandCited = citation && citation.brandCitedCount > 0;
-              const compCited = citation && citation.competitorCitedCount > 0;
+      {/* Category + summary */}
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Category</p>
+        <p className="mt-1 text-sm text-[var(--ink-900)]">{research.category}</p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--ink-700)]">{research.brandSummary}</p>
+      </div>
+
+      {/* Prompts + leaderboard side by side */}
+      <div className="grid gap-8 lg:grid-cols-5">
+        <section className="lg:col-span-3">
+          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Prompts tested</p>
+          <div className="space-y-1.5">
+            {analysis.prompts.map((prompt, i) => {
+              const cit = analysis.citations[i];
+              const brandIn = cit && cit.brandCitedCount > 0;
+              const compIn = cit && cit.competitorCitedCount > 0;
               return (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 rounded-xl border border-pink-100 bg-white/60 px-3 py-2"
-                >
-                  <span className="mt-0.5 font-mono text-xs text-[var(--ink-500)]">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
+                <div key={i} className="flex items-center gap-3 border-b border-[#f0f0f0] py-2 last:border-0">
+                  <span className="font-mono text-[11px] text-[var(--ink-500)]">{String(i + 1).padStart(2, '0')}</span>
                   <p className="flex-1 text-sm text-[var(--ink-900)]">{prompt}</p>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        brandCited
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-rose-100 text-rose-600'
-                      }`}
-                    >
-                      You {brandCited ? '✓' : '✗'}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        compCited
-                          ? 'bg-pink-100 text-pink-700'
-                          : 'bg-neutral-100 text-neutral-500'
-                      }`}
-                    >
-                      Rival {compCited ? '✓' : '✗'}
-                    </span>
-                  </div>
+                  <span className={`text-[11px] font-medium ${brandIn ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {brandIn ? 'cited' : 'absent'}
+                  </span>
+                  <span className={`text-[11px] ${compIn ? 'text-[var(--ink-700)]' : 'text-[var(--ink-500)]'}`}>
+                    {compIn ? 'rival ✓' : '—'}
+                  </span>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* Competitor leaderboard */}
-        <section className="space-y-3 rounded-2xl border border-pink-100 bg-white/40 p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-[var(--ink-900)]">
-            Competitor leaderboard
-          </h3>
-          <p className="text-xs text-[var(--ink-500)]">
-            Domains AI consistently cites in this category.
-          </p>
-          <div className="space-y-2 pt-1">
+        <section className="lg:col-span-2">
+          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Competitor leaderboard</p>
+          <div className="divide-y divide-[#f0f0f0]">
             {research.discoveredCompetitors.map((c) => (
-              <CompetitorLeaderboardRow
-                key={c.domain}
-                c={c}
-                selected={c.domain === research.selectedCompetitorDomain}
-              />
+              <CompetitorLeaderboardRow key={c.domain} c={c} selected={c.domain === research.selectedCompetitorDomain} />
             ))}
           </div>
         </section>
       </div>
 
-      {/* Narrative card */}
+      {/* Narrative */}
       {research.narrative && (
-        <section className="rounded-2xl border border-pink-100 bg-white/60 p-6">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded-full bg-[var(--ink-900)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-              Analysis
-            </span>
-            <h3 className="text-sm font-semibold text-[var(--ink-900)]">
-              What this means and what to ship
-            </h3>
-          </div>
+        <section>
+          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Analysis</p>
           <div className="prose-tight">{renderMarkdownToReact(research.narrative)}</div>
         </section>
       )}
@@ -695,84 +577,63 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
   const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
   const hasResearch = !!analysis.research;
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       {hasResearch && analysis.research && (
         <FindingsDashboard research={analysis.research} analysis={analysis} />
       )}
 
-      {/* Score hero — only when there's no research dashboard (manual mode) */}
+      {/* Score — only in manual mode */}
       {!hasResearch && (
-        <section className="rounded-2xl border border-pink-100 bg-white/40 p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-500)]">
-            AI visibility score
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">AI visibility score</p>
+          <p className="mt-2 font-mono text-7xl font-bold text-[var(--ink-900)]">
+            {analysis.score}<span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
           </p>
-          <p className="mt-2 font-mono text-6xl font-bold text-[var(--ink-900)] sm:text-7xl">
-            {analysis.score}
-            <span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
-          </p>
-        </section>
+        </div>
       )}
 
-      {/* Dimension breakdown */}
-      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
-        <h3 className="mb-4 text-sm font-semibold text-[var(--ink-900)]">
-          Score breakdown
-        </h3>
-        <div className="space-y-4">
+      {/* Breakdown */}
+      <section>
+        <p className="mb-4 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Breakdown</p>
+        <div className="max-w-lg space-y-3">
           {analysis.scoreBreakdown.dimensions.map((d) => (
             <Bar key={d.dimension} d={d} />
           ))}
         </div>
       </section>
 
-      {/* Citations card */}
-      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h3 className="text-sm font-semibold text-[var(--ink-900)]">
-            Citations — you vs rival
-          </h3>
-          <span className="text-xs text-[var(--ink-500)]">
-            Engine: {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
-          </span>
-        </div>
-        <div className="space-y-2">
+      {/* Citations */}
+      <section>
+        <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+          Citations · {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
+        </p>
+        <div className="space-y-1.5">
           {analysis.citations.map((c, i) => (
             <CitationRow key={i} c={c} />
           ))}
         </div>
       </section>
 
-      {/* Issues card */}
-      <section className="rounded-2xl border border-pink-100 bg-white/40 p-5">
-        <h3 className="mb-3 text-sm font-semibold text-[var(--ink-900)]">Top issues</h3>
-        <ul className="space-y-2">
+      {/* Issues */}
+      <section>
+        <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Issues</p>
+        <div className="space-y-2">
           {analysis.issues.map((iss, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-3 rounded-xl border border-pink-100 bg-white/60 px-3 py-2 text-sm"
-            >
-              <span
-                className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                  iss.severity === 'high'
-                    ? 'bg-rose-100 text-rose-700'
-                    : iss.severity === 'medium'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-emerald-100 text-emerald-700'
-                }`}
-              >
+            <div key={i} className="flex items-start gap-3 border-b border-[#f0f0f0] py-2.5 last:border-0">
+              <span className={`mt-0.5 text-[11px] font-semibold uppercase ${severity(iss.severity)}`}>
                 {iss.severity}
               </span>
-              <div className="space-y-0.5">
-                <p className="font-medium text-[var(--ink-900)]">{iss.title}</p>
+              <div>
+                <p className="text-sm font-medium text-[var(--ink-900)]">{iss.title}</p>
                 <p className="text-xs text-[var(--ink-500)]">{iss.why}</p>
               </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       {/* Actions */}
-      <div className="flex items-center gap-4 pt-4">
+      <div className="flex items-center gap-4">
         <button onClick={onRepair} className="gf-btn-primary px-7 py-3 text-sm font-semibold">
           Generate fixes
         </button>
@@ -808,19 +669,19 @@ function FixCard({ fix }: { fix: Fix }) {
   };
 
   return (
-    <div className="rounded-xl border border-pink-100 bg-white/50 p-5">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="border-b border-[#f0f0f0] pb-5 last:border-0 last:pb-0">
+      <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--ink-900)]">{FIX_LABEL[fix.type]}</h3>
-        <div className="flex gap-2 text-xs">
-          <button onClick={copy} className="text-[var(--pink-600)] hover:underline">
-            {copied ? 'Copied' : 'Copy'}
+        <div className="flex gap-3 text-xs">
+          <button onClick={copy} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
+            {copied ? 'Copied ✓' : 'Copy'}
           </button>
-          <button onClick={download} className="text-[var(--ink-500)] hover:underline">
+          <button onClick={download} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
             Download
           </button>
         </div>
       </div>
-      <pre className="max-h-64 overflow-auto rounded-lg bg-pink-50/50 p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
+      <pre className="max-h-56 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
         {fix.content}
       </pre>
     </div>
@@ -859,87 +720,84 @@ function RepairStep({
   const publishReady = usingOauth ? !!selectedRepo : usingEnv;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       <div>
         <h1 className="text-4xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-5xl">
-          Your fixes
+          Fixes
         </h1>
         <p className="mt-2 text-sm text-[var(--ink-500)]">
-          Review, copy, or ship as a PR. Nothing publishes without your approval.
+          Nothing ships without your approval.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {fixes.map((f) => (
           <FixCard key={f.id} fix={f} />
         ))}
       </div>
 
-      {/* GitHub block */}
-      {ghUser ? (
-        <div className="rounded-xl border border-pink-100 bg-white/50 p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-[var(--ink-900)]">
-              Open a PR against
-            </p>
-            <button
-              onClick={onDisconnect}
-              className="text-xs text-[var(--ink-500)] hover:text-[var(--pink-600)]"
+      {/* GitHub publish section */}
+      <section className="space-y-4">
+        <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Ship</p>
+
+        {ghUser ? (
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--ink-900)]">Open PR against:</p>
+              <button
+                onClick={onDisconnect}
+                className="text-xs text-[var(--ink-500)] hover:text-[var(--pink-600)]"
+              >
+                Disconnect
+              </button>
+            </div>
+            <select
+              className="gf-input mt-2 w-full px-4 py-3 text-sm"
+              value={selectedRepo}
+              onChange={(e) => setSelectedRepo(e.target.value)}
+              disabled={loadingRepos || !repos}
             >
-              Disconnect
-            </button>
-          </div>
-          <select
-            className="gf-input w-full px-4 py-3 text-sm"
-            value={selectedRepo}
-            onChange={(e) => setSelectedRepo(e.target.value)}
-            disabled={loadingRepos || !repos}
-          >
-            <option value="">
-              {loadingRepos
-                ? 'Loading your repos…'
-                : repos && repos.length > 0
-                  ? 'Choose a repository…'
-                  : 'No writable repos found'}
-            </option>
-            {repos?.map((r) => (
-              <option key={r.fullName} value={r.fullName}>
-                {r.fullName}
-                {r.private ? ' · private' : ''}
+              <option value="">
+                {loadingRepos
+                  ? 'Loading repos…'
+                  : repos && repos.length > 0
+                    ? 'Choose a repository…'
+                    : 'No writable repos found'}
               </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs text-[var(--ink-500)]">
-            Only repos you can push to are listed.
-          </p>
-        </div>
-      ) : !usingEnv ? (
-        <div className="rounded-xl border border-pink-100 bg-white/50 p-5">
-          <p className="text-sm text-[var(--ink-700)]">
-            Not connected to GitHub yet. Connect now to open a PR with these fixes.
-          </p>
+              {repos?.map((r) => (
+                <option key={r.fullName} value={r.fullName}>
+                  {r.fullName}
+                  {r.private ? ' · private' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : !usingEnv ? (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onConnect}
+              disabled={!caps.oauthConfigured}
+              className="gf-btn-primary px-5 py-2 text-xs font-semibold"
+            >
+              {caps.oauthConfigured ? 'Connect GitHub' : 'OAuth not configured'}
+            </button>
+            <span className="text-xs text-[var(--ink-500)]">Connect to open a PR.</span>
+          </div>
+        ) : null}
+
+        <div className="flex items-center gap-4 pt-2">
           <button
-            onClick={onConnect}
-            disabled={!caps.oauthConfigured}
-            className="gf-btn-primary mt-3 px-5 py-2 text-xs font-semibold"
+            onClick={onPublish}
+            disabled={!publishReady}
+            className="gf-btn-primary px-7 py-3 text-sm font-semibold"
           >
-            {caps.oauthConfigured ? 'Connect GitHub' : 'OAuth not configured'}
+            {usingOauth && !selectedRepo ? 'Pick a repo' : 'Open PR'}
+          </button>
+          <button onClick={onBack} className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]">
+            ← Back
           </button>
         </div>
-      ) : null}
-
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onPublish}
-          disabled={!publishReady}
-          className="gf-btn-primary px-7 py-3 text-sm font-semibold"
-        >
-          {usingOauth && !selectedRepo ? 'Pick a repo first' : 'Open PR'}
-        </button>
-        <button onClick={onBack} className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]">
-          ← Back
-        </button>
-      </div>
+      </section>
     </div>
   );
 }
