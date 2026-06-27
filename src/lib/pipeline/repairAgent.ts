@@ -128,6 +128,23 @@ function extractJsonObject(text: string): unknown {
   }
 }
 
+function validateDrafts(parsed: unknown): GeneratedDrafts | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const p = parsed as Partial<GeneratedDrafts>;
+  if (
+    typeof p.faq_markdown === 'string' &&
+    typeof p.comparison_markdown === 'string' &&
+    typeof p.schema_jsonld === 'string'
+  ) {
+    return {
+      faq_markdown: p.faq_markdown,
+      comparison_markdown: p.comparison_markdown,
+      schema_jsonld: p.schema_jsonld,
+    };
+  }
+  return null;
+}
+
 async function callAnthropic(analysis: AnalysisResult): Promise<GeneratedDrafts | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -143,20 +160,41 @@ async function callAnthropic(analysis: AnalysisResult): Promise<GeneratedDrafts 
       .map((b) => (b.type === 'text' ? b.text : ''))
       .join('')
       .trim();
-    const parsed = extractJsonObject(text) as Partial<GeneratedDrafts> | null;
-    if (
-      parsed &&
-      typeof parsed.faq_markdown === 'string' &&
-      typeof parsed.comparison_markdown === 'string' &&
-      typeof parsed.schema_jsonld === 'string'
-    ) {
-      return {
-        faq_markdown: parsed.faq_markdown,
-        comparison_markdown: parsed.comparison_markdown,
-        schema_jsonld: parsed.schema_jsonld,
-      };
-    }
+    return validateDrafts(extractJsonObject(text));
+  } catch {
     return null;
+  }
+}
+
+interface GeminiResponse {
+  candidates?: { content?: { parts?: { text?: string }[] } }[];
+}
+
+async function callGemini(analysis: AnalysisResult): Promise<GeneratedDrafts | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  // gemini-2.0-flash is the current free-tier sweet spot: fast + structured-output capable.
+  const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: buildPrompt(analysis) }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          maxOutputTokens: MAX_TOKENS,
+          temperature: 0.7,
+        },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as GeminiResponse;
+    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+    return validateDrafts(extractJsonObject(text));
   } catch {
     return null;
   }
@@ -166,7 +204,8 @@ export async function repairAgent(analysis: AnalysisResult): Promise<Fix[]> {
   const brand = host(analysis.brandUrl);
   const competitor = host(analysis.competitorUrl);
 
-  const generated = await callAnthropic(analysis);
+  // Try paid Anthropic first (best quality), then free-tier Gemini, then templates.
+  const generated = (await callAnthropic(analysis)) ?? (await callGemini(analysis));
   const drafts: GeneratedDrafts = generated ?? {
     faq_markdown: fallbackFaq(analysis.prompts, brand),
     comparison_markdown: fallbackComparison(brand, competitor),
