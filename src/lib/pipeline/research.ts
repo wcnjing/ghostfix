@@ -198,7 +198,8 @@ const FALLBACK_COMPETITORS_BY_CATEGORY: {
   competitors: { domain: string; url: string; sampleTitle: string }[];
 }[] = [
   {
-    match: /\b(video|streaming|creator|content sharing|short-form|livestream)\b/i,
+    match:
+      /\b(youtube|video|videos|streaming|creator|creators|content sharing|short-form|livestream|live streaming|music events)\b/i,
     competitors: [
       {
         domain: 'vimeo.com',
@@ -214,6 +215,11 @@ const FALLBACK_COMPETITORS_BY_CATEGORY: {
         domain: 'twitch.tv',
         url: 'https://www.twitch.tv',
         sampleTitle: 'Twitch — live streaming platform',
+      },
+      {
+        domain: 'dailymotion.com',
+        url: 'https://www.dailymotion.com',
+        sampleTitle: 'Dailymotion — video sharing platform',
       },
     ],
   },
@@ -327,19 +333,48 @@ const PROMPT_BRANDS: Record<string, { domain: string; url: string; sampleTitle: 
   },
 };
 
+const DOMAIN_COMPETITOR_FALLBACKS: {
+  match: RegExp;
+  competitors: { domain: string; url: string; sampleTitle: string }[];
+}[] = [
+  {
+    match: /\b(youtube\.com|youtu\.be)\b/i,
+    competitors: FALLBACK_COMPETITORS_BY_CATEGORY[0].competitors,
+  },
+  {
+    match: /\b(vimeo\.com|tiktok\.com|twitch\.tv|dailymotion\.com)\b/i,
+    competitors: FALLBACK_COMPETITORS_BY_CATEGORY[0].competitors,
+  },
+  {
+    match: /\b(notion\.so|asana\.com|monday\.com|linear\.app|atlassian\.com|trello\.com)\b/i,
+    competitors: FALLBACK_COMPETITORS_BY_CATEGORY[1].competitors,
+  },
+  {
+    match: /\b(salesforce\.com|hubspot\.com|zoho\.com)\b/i,
+    competitors: FALLBACK_COMPETITORS_BY_CATEGORY[2].competitors,
+  },
+  {
+    match: /\b(mailchimp\.com|klaviyo\.com|constantcontact\.com|sendgrid\.com|mailgun\.com)\b/i,
+    competitors: FALLBACK_COMPETITORS_BY_CATEGORY[3].competitors,
+  },
+];
+
 function fallbackCompetitors(
   prompts: string[],
   brandDomain: string,
   category: string,
+  brandTitle = '',
+  summary = '',
 ): DiscoveredCompetitor[] {
   const promptText = prompts.join(' ').toLowerCase();
+  const signalText = `${brandDomain} ${brandTitle} ${category} ${summary} ${promptText}`.toLowerCase();
   const byDomain = new Map<
     string,
     { domain: string; url: string; sampleTitle: string; promptHits: number }
   >();
 
   for (const [brand, competitor] of Object.entries(PROMPT_BRANDS)) {
-    if (!promptText.includes(brand)) continue;
+    if (!signalText.includes(brand)) continue;
     if (competitor.domain === brandDomain) continue;
     byDomain.set(competitor.domain, {
       ...competitor,
@@ -347,8 +382,17 @@ function fallbackCompetitors(
     });
   }
 
+  const domainMatch = DOMAIN_COMPETITOR_FALLBACKS.find((entry) => entry.match.test(signalText));
+  for (const competitor of domainMatch?.competitors ?? []) {
+    if (competitor.domain === brandDomain || byDomain.has(competitor.domain)) continue;
+    byDomain.set(competitor.domain, {
+      ...competitor,
+      promptHits: 0,
+    });
+  }
+
   const categoryMatch = FALLBACK_COMPETITORS_BY_CATEGORY.find((entry) =>
-    entry.match.test(`${category} ${promptText}`),
+    entry.match.test(signalText),
   );
   for (const competitor of categoryMatch?.competitors ?? []) {
     if (competitor.domain === brandDomain || byDomain.has(competitor.domain)) continue;
@@ -356,6 +400,16 @@ function fallbackCompetitors(
       ...competitor,
       promptHits: 0,
     });
+  }
+
+  if (byDomain.size === 0) {
+    for (const competitor of FALLBACK_COMPETITORS_BY_CATEGORY[1].competitors) {
+      if (competitor.domain === brandDomain || byDomain.has(competitor.domain)) continue;
+      byDomain.set(competitor.domain, {
+        ...competitor,
+        promptHits: 0,
+      });
+    }
   }
 
   return Array.from(byDomain.values())
@@ -584,7 +638,9 @@ export async function discover(brandUrl: string, hint?: string): Promise<Researc
     summary,
     prompts,
     competitors:
-      competitors.length > 0 ? competitors : fallbackCompetitors(prompts, brand.domain, category),
+      competitors.length > 0
+        ? competitors
+        : fallbackCompetitors(prompts, brand.domain, category, brand.title, summary),
   };
 }
 
