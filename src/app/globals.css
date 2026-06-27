@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+  --pink-50: #fff5fa;
+  --pink-100: #ffe4f1;
+  --pink-200: #ffc9e3;
+  --pink-300: #ffa6cd;
+  --pink-400: #ff7ab2;
+  --pink-500: #ec4899;
+  --pink-600: #db2777;
+  --pink-700: #be185d;
+  --ink-900: #1a0b15;
+  --ink-700: #4a2a3d;
+  --ink-500: #7a5a6a;
+}
+
+html,
+body {
+  margin: 0;
+  color: var(--ink-900);
+  font-family:
+    'Inter',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  background:
+    radial-gradient(at 15% 10%, #ffd6e8 0%, transparent 45%),
+    radial-gradient(at 85% 20%, #ffe9f3 0%, transparent 40%),
+    radial-gradient(at 50% 90%, #ffc9e3 0%, transparent 50%),
+    linear-gradient(180deg, #ffffff 0%, #fff5fa 60%, #ffe4f1 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Soft glowing orbs behind everything — fixed so they stay put on scroll */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: -1;
+}
+body::before {
+  width: 480px;
+  height: 480px;
+  top: -120px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(255, 122, 178, 0.35), transparent 70%);
+}
+body::after {
+  width: 520px;
+  height: 520px;
+  bottom: -160px;
+  left: -160px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.25), transparent 70%);
+}
+
+/* Reusable card surface */
+.gf-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 201, 227, 0.6);
+  border-radius: 24px;
+  box-shadow:
+    0 1px 2px rgba(190, 24, 93, 0.04),
+    0 12px 32px -8px rgba(236, 72, 153, 0.12);
+}
+
+.gf-btn-primary {
+  background: linear-gradient(135deg, #ff7ab2 0%, #ec4899 100%);
+  color: white;
+  border-radius: 9999px;
+  box-shadow:
+    0 4px 12px rgba(236, 72, 153, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    transform 120ms,
+    box-shadow 120ms;
+}
+.gf-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 18px rgba(236, 72, 153, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.gf-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gf-btn-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 122, 178, 0.4);
+  border-radius: 9999px;
+  color: var(--pink-700);
+  transition: background 120ms;
+}
+.gf-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.gf-input {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 201, 227, 0.7);
+  border-radius: 12px;
+  color: var(--ink-900);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.gf-input:focus {
+  outline: none;
+  border-color: var(--pink-400);
+  box-shadow: 0 0 0 3px rgba(255, 122, 178, 0.2);
+}
