@@ -57,6 +57,24 @@ export interface Issue {
   why: string;
 }
 
+export interface DiscoveredCompetitor {
+  domain: string;
+  url: string;
+  citationCount: number;       // how many of the discovered prompts cited this domain
+  promptCount: number;         // out of how many prompts
+  sampleTitle?: string;
+}
+
+export interface ResearchFindings {
+  brandSummary: string;        // 1-2 sentence description of what the brand does
+  category: string;            // e.g. "B2B project management software"
+  discoveredPrompts: string[]; // prompts derived from the brand's category
+  discoveredCompetitors: DiscoveredCompetitor[];
+  selectedCompetitorDomain: string; // which one we deep-dove against
+  narrative: string;           // markdown report of findings
+  source: 'auto' | 'manual';   // auto = we discovered, manual = user provided
+}
+
 export interface AnalysisResult {
   id: string;
   brandUrl: string;
@@ -67,6 +85,7 @@ export interface AnalysisResult {
   citations: Citation[];
   issues: Issue[];
   createdAt: string;
+  research?: ResearchFindings;
 }
 
 export type FixType = 'faq' | 'comparison_page' | 'schema';
@@ -94,8 +113,11 @@ export interface CrawlSignals {
 
 export interface AnalyzeRequest {
   brandUrl: string;
-  competitorUrl: string;
-  prompts: string[];
+  // Both optional now: when omitted, the pipeline auto-discovers via research.ts.
+  competitorUrl?: string;
+  prompts?: string[];
+  // Optional hint to nudge discovery (e.g. "B2B SaaS for design teams").
+  hint?: string;
 }
 
 export interface RepairRequest {
