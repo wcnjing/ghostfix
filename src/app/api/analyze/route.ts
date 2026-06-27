@@ -7,6 +7,7 @@ import { discover, synthesizeFindings } from '@/lib/pipeline/research';
 import { scoringEngine } from '@/lib/pipeline/scoringEngine';
 import { persistAnalysis } from '@/lib/supabase';
 import type { AnalysisResult, AnalyzeRequest } from '@/lib/types';
+import { normalizeHttpUrl, normalizePrompts } from '@/lib/validation';
 
 export async function POST(req: Request) {
   let body: AnalyzeRequest;
@@ -16,7 +17,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const { brandUrl, hint } = body;
+  const brandUrl = normalizeHttpUrl(body.brandUrl);
+  const { hint } = body;
   if (!brandUrl) {
     return NextResponse.json(
       { error: 'missing_fields', expected: ['brandUrl'] },
@@ -54,11 +56,19 @@ export async function POST(req: Request) {
     const top = research.competitors[0];
     competitorUrl = top.url.startsWith('http') ? top.url : `https://${top.domain}`;
   } else {
-    if (body.prompts!.length > 5) {
-      return NextResponse.json({ error: 'too_many_prompts', max: 5 }, { status: 400 });
+    const manualPrompts = normalizePrompts(body.prompts, 5);
+    const manualCompetitorUrl = normalizeHttpUrl(body.competitorUrl);
+    if (!manualCompetitorUrl) {
+      return NextResponse.json(
+        { error: 'invalid_url', expected: ['competitorUrl'] },
+        { status: 400 },
+      );
     }
-    prompts = body.prompts!;
-    competitorUrl = body.competitorUrl!;
+    if (!manualPrompts) {
+      return NextResponse.json({ error: 'invalid_prompts', max: 5 }, { status: 400 });
+    }
+    prompts = manualPrompts;
+    competitorUrl = manualCompetitorUrl;
   }
 
   const [brand, competitor, citations] = await Promise.all([

@@ -5,11 +5,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 
+import { config } from '@/lib/config';
 import { generateJson } from '@/lib/llm';
 import type { AnalysisResult, Fix } from '@/lib/types';
-
-const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 4000;
 
 function host(url: string): string {
   try {
@@ -153,8 +151,8 @@ async function callAnthropic(analysis: AnalysisResult): Promise<GeneratedDrafts 
   const client = new Anthropic({ apiKey });
   try {
     const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
+      model: config.anthropicModel,
+      max_tokens: config.anthropicMaxTokens,
       messages: [{ role: 'user', content: buildPrompt(analysis) }],
     });
     const text = res.content

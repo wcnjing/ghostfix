@@ -2,11 +2,8 @@
 // Falls back to a representative mock when fetch fails so the demo never breaks.
 
 import * as cheerio from 'cheerio';
+import { config } from '@/lib/config';
 import type { CrawlSignals, PricingClarity } from '@/lib/types';
-
-const FETCH_TIMEOUT_MS = 8000;
-const UA =
-  'Mozilla/5.0 (compatible; GhostfixBot/0.1; +https://ghostfix.local) Chrome/120 Safari/537.36';
 
 function mockFor(url: string, role: 'brand' | 'competitor'): CrawlSignals {
   if (role === 'competitor') {
@@ -147,9 +144,9 @@ export async function crawler(url: string, role: 'brand' | 'competitor'): Promis
   let headerLastModified: string | null = null;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
     const res = await fetch(url, {
-      headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml' },
+      headers: { 'user-agent': config.userAgent, accept: 'text/html,application/xhtml+xml' },
       redirect: 'follow',
       signal: controller.signal,
     });
