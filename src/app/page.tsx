@@ -654,8 +654,87 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
 
 // ─── Step 3: Repair ──────────────────────────────────────────────────────────
 
+// Descriptions of what each fix type does for the user.
+const FIX_DESC: Record<Fix['type'], string> = {
+  faq: 'Add an FAQ section so AI engines can cite direct answers from your site.',
+  comparison_page: 'Publish a comparison page that positions you against the competitor.',
+  schema: 'Embed structured data so search and AI engines parse your content correctly.',
+};
+
+function renderFixPreview(content: string, type: Fix['type']): React.ReactNode {
+  if (type === 'schema') {
+    // Parse JSON-LD and show it as a clean structured list
+    try {
+      const parsed = JSON.parse(content) as { mainEntity?: { name?: string; acceptedAnswer?: { text?: string } }[] };
+      if (parsed.mainEntity && Array.isArray(parsed.mainEntity)) {
+        return (
+          <div className="space-y-3">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">FAQPage schema preview</p>
+            {parsed.mainEntity.map((q, i) => (
+              <div key={i} className="rounded-lg bg-[#fafafa] px-4 py-3">
+                <p className="text-sm font-medium text-[var(--ink-900)]">{q.name}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--ink-700)]">{q.acceptedAnswer?.text}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    } catch { /* fall through to raw */ }
+    return (
+      <pre className="max-h-48 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
+        {content}
+      </pre>
+    );
+  }
+
+  // Markdown: render as styled HTML preview
+  const lines = content.split('\n');
+  const nodes: React.ReactNode[] = [];
+  let bulletBuf: string[] = [];
+
+  const flushBullets = () => {
+    if (bulletBuf.length === 0) return;
+    nodes.push(
+      <ul key={`ul-${nodes.length}`} className="my-2 space-y-1 pl-4 text-sm text-[var(--ink-700)]">
+        {bulletBuf.map((b, i) => <li key={i} className="list-disc">{b}</li>)}
+      </ul>,
+    );
+    bulletBuf = [];
+  };
+
+  for (const line of lines) {
+    if (line.startsWith('# ')) {
+      flushBullets();
+      nodes.push(<h2 key={`h-${nodes.length}`} className="mt-4 text-base font-semibold text-[var(--ink-900)]">{line.slice(2)}</h2>);
+    } else if (line.startsWith('## ')) {
+      flushBullets();
+      nodes.push(<h3 key={`h-${nodes.length}`} className="mt-3 text-sm font-semibold text-[var(--ink-900)]">{line.slice(3)}</h3>);
+    } else if (line.startsWith('| ')) {
+      // Table row — collect into a simple table
+      flushBullets();
+      const cells = line.split('|').filter(Boolean).map((c) => c.trim());
+      if (cells.every((c) => /^[-:]+$/.test(c))) continue; // skip separator
+      nodes.push(
+        <div key={`tr-${nodes.length}`} className="grid grid-cols-3 gap-2 border-b border-[#f0f0f0] py-1.5 text-xs text-[var(--ink-700)] first:font-medium first:text-[var(--ink-900)]">
+          {cells.slice(0, 3).map((cell, ci) => <span key={ci}>{cell.replace(/_/g, '')}</span>)}
+        </div>,
+      );
+    } else if (/^[-*]\s/.test(line)) {
+      bulletBuf.push(line.replace(/^[-*]\s/, ''));
+    } else if (line.trim()) {
+      flushBullets();
+      nodes.push(<p key={`p-${nodes.length}`} className="my-1.5 text-sm leading-relaxed text-[var(--ink-700)]">{line}</p>);
+    } else {
+      flushBullets();
+    }
+  }
+  flushBullets();
+  return <div className="rounded-lg bg-[#fafafa] px-4 py-4">{nodes}</div>;
+}
+
 function FixCard({ fix }: { fix: Fix }) {
   const [copied, setCopied] = useState(false);
+  const [showSource, setShowSource] = useState(false);
 
   const copy = async () => {
     await navigator.clipboard.writeText(fix.content);
@@ -676,10 +755,13 @@ function FixCard({ fix }: { fix: Fix }) {
   };
 
   return (
-    <div className="rounded-xl border border-[#e5e5e5] p-4">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-xl border border-[#e5e5e5] p-5">
+      <div className="mb-1 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--ink-900)]">{FIX_LABEL[fix.type]}</h3>
         <div className="flex gap-3 text-xs">
+          <button onClick={() => setShowSource(!showSource)} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
+            {showSource ? 'Preview' : 'Source'}
+          </button>
           <button onClick={copy} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
             {copied ? 'Copied ✓' : 'Copy'}
           </button>
@@ -688,9 +770,17 @@ function FixCard({ fix }: { fix: Fix }) {
           </button>
         </div>
       </div>
-      <pre className="max-h-56 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
-        {fix.content}
-      </pre>
+      <p className="mb-3 text-xs text-[var(--ink-500)]">{FIX_DESC[fix.type]}</p>
+
+      {showSource ? (
+        <pre className="max-h-56 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
+          {fix.content}
+        </pre>
+      ) : (
+        <div className="max-h-72 overflow-auto">
+          {renderFixPreview(fix.content, fix.type)}
+        </div>
+      )}
     </div>
   );
 }
@@ -703,6 +793,8 @@ interface RepairProps {
   loadingRepos: boolean;
   selectedRepo: string;
   setSelectedRepo: (v: string) => void;
+  targetBranch: string;
+  setTargetBranch: (v: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onPublish: () => void;
@@ -717,6 +809,8 @@ function RepairStep({
   loadingRepos,
   selectedRepo,
   setSelectedRepo,
+  targetBranch,
+  setTargetBranch,
   onConnect,
   onDisconnect,
   onPublish,
@@ -778,6 +872,12 @@ function RepairStep({
                 </option>
               ))}
             </select>
+            <input
+              className="gf-input mt-2 w-full px-4 py-3 text-sm"
+              value={targetBranch}
+              onChange={(e) => setTargetBranch(e.target.value)}
+              placeholder="Target branch (leave empty for repo default)"
+            />
           </div>
         ) : !usingEnv ? (
           <div className="flex items-center gap-4">
@@ -862,6 +962,7 @@ export default function HomePage() {
   const [repos, setRepos] = useState<GhRepo[] | null>(null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState('');
+  const [targetBranch, setTargetBranch] = useState('');
 
   // Initial probe + handle the OAuth redirect query params.
   useEffect(() => {
@@ -995,6 +1096,7 @@ export default function HomePage() {
     try {
       const body: Record<string, unknown> = { analysis, fixes };
       if (ghUser && selectedRepo) body.repo = selectedRepo;
+      if (targetBranch.trim()) body.base = targetBranch.trim();
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -1100,6 +1202,8 @@ export default function HomePage() {
           loadingRepos={loadingRepos}
           selectedRepo={selectedRepo}
           setSelectedRepo={setSelectedRepo}
+          targetBranch={targetBranch}
+          setTargetBranch={setTargetBranch}
           onConnect={() => {
             window.location.href = '/api/auth/github';
           }}
