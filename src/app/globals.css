@@ -26,7 +26,10 @@ body {
     -apple-system,
     'Segoe UI',
     sans-serif;
-  background: #fefefe;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(224, 77, 138, 0.08), transparent 24rem),
+    radial-gradient(circle at 88% 18%, rgba(244, 168, 203, 0.12), transparent 22rem),
+    linear-gradient(180deg, #fff 0%, #fff 52%, #fdf8fb 100%);
   min-height: 100vh;
 }
 
@@ -34,10 +37,16 @@ body {
   background: var(--ink-900);
   color: white;
   border-radius: 9999px;
-  transition: opacity 120ms;
+  box-shadow: 0 14px 30px rgba(17, 17, 17, 0.14);
+  transition:
+    opacity 120ms,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 .gf-btn-primary:hover:not(:disabled) {
   opacity: 0.85;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px rgba(17, 17, 17, 0.18);
 }
 .gf-btn-primary:disabled {
   opacity: 0.35;
@@ -49,9 +58,129 @@ body {
   border: 1px solid #e5e5e5;
   border-radius: 10px;
   color: var(--ink-900);
-  transition: border-color 120ms;
+  box-shadow: 0 12px 28px rgba(17, 17, 17, 0.03);
+  transition:
+    border-color 120ms,
+    box-shadow 120ms,
+    transform 120ms;
 }
 .gf-input:focus {
   outline: none;
   border-color: var(--pink-400);
+  box-shadow: 0 0 0 4px rgba(236, 111, 166, 0.12);
+  transform: translateY(-1px);
+}
+
+.gf-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.gf-glass {
+  border: 1px solid rgba(249, 208, 227, 0.9);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 70px rgba(224, 77, 138, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.gf-card {
+  border: 1px solid #f9d0e3;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 45px rgba(224, 77, 138, 0.07);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.gf-card:hover {
+  border-color: var(--pink-300);
+  box-shadow: 0 24px 70px rgba(224, 77, 138, 0.12);
+  transform: translateY(-2px);
+}
+
+.gf-enter {
+  animation: gf-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gf-enter-delay-1 {
+  animation: gf-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.gf-enter-delay-2 {
+  animation: gf-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
+}
+
+.gf-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.gf-shimmer::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: gf-shimmer 2.8s ease-in-out infinite;
+}
+
+.gf-float {
+  animation: gf-float 5.2s ease-in-out infinite;
+}
+
+.gf-pulse-ring {
+  animation: gf-pulse-ring 2.4s ease-in-out infinite;
+}
+
+@keyframes gf-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gf-shimmer {
+  0%,
+  52% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes gf-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes gf-pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 77, 138, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(224, 77, 138, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }
