@@ -1237,7 +1237,10 @@ export default function HomePage() {
     [promptsText],
   );
 
-  const analyze = async (mode: 'research' | 'manual' | 'demo') => {
+  const analyze = async (
+    mode: 'research' | 'manual' | 'demo',
+    override?: { brandUrl?: string; competitorUrl?: string; prompts?: string[]; hint?: string },
+  ) => {
     setError(null);
     setStep('analyzing');
     const body: Record<string, unknown> =
@@ -1248,8 +1251,15 @@ export default function HomePage() {
             prompts: DEFAULT_PROMPTS.split('\n').filter(Boolean),
           }
         : mode === 'manual'
-          ? { brandUrl, competitorUrl, prompts }
-          : { brandUrl, hint: hint || undefined };
+          ? {
+              brandUrl: override?.brandUrl ?? brandUrl,
+              competitorUrl: override?.competitorUrl ?? competitorUrl,
+              prompts: override?.prompts ?? prompts,
+            }
+          : {
+              brandUrl: override?.brandUrl ?? brandUrl,
+              hint: (override?.hint ?? hint) || undefined,
+            };
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -1340,19 +1350,25 @@ export default function HomePage() {
   // end-to-end without depending on real third-party sites.
   const testFixture = () => {
     const origin = window.location.origin;
+    const fixtureBrandUrl = `${origin}/demo-sites/weak/`;
+    const fixtureCompetitorUrl = `${origin}/demo-sites/strong/`;
+    const fixturePrompts = [
+      'best project management for engineering teams',
+      'vertex vs spectra',
+      'cheapest sprint planning tool with git integration',
+      'is spectra worth it for startups',
+      'top alternatives to vertex',
+    ];
     setManual(true);
-    setBrandUrl(`${origin}/demo-sites/weak/`);
-    setCompetitorUrl(`${origin}/demo-sites/strong/`);
-    setPromptsText(
-      [
-        'best project management for engineering teams',
-        'vertex vs spectra',
-        'cheapest sprint planning tool with git integration',
-        'is spectra worth it for startups',
-        'top alternatives to vertex',
-      ].join('\n'),
-    );
+    setBrandUrl(fixtureBrandUrl);
+    setCompetitorUrl(fixtureCompetitorUrl);
+    setPromptsText(fixturePrompts.join('\n'));
     setError(null);
+    void analyze('manual', {
+      brandUrl: fixtureBrandUrl,
+      competitorUrl: fixtureCompetitorUrl,
+      prompts: fixturePrompts,
+    });
   };
 
   return (
