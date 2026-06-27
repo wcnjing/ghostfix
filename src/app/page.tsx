@@ -6,8 +6,10 @@ import type {
   AnalysisResult,
   Citation,
   DimensionScore,
+  DiscoveredCompetitor,
   Fix,
   Issue,
+  ResearchFindings,
   ScoreDimension,
 } from '@/lib/types';
 
@@ -211,66 +213,105 @@ function ConnectStep({ oauthConfigured, onSkip }: ConnectProps) {
 interface InputProps {
   brandUrl: string;
   setBrandUrl: (v: string) => void;
+  hint: string;
+  setHint: (v: string) => void;
   competitorUrl: string;
   setCompetitorUrl: (v: string) => void;
   promptsText: string;
   setPromptsText: (v: string) => void;
-  count: number;
-  onGo: () => void;
+  manual: boolean;
+  setManual: (v: boolean) => void;
+  manualCount: number;
+  onResearch: () => void;
+  onManual: () => void;
   onDemo: () => void;
 }
 
 function InputStep({
   brandUrl, setBrandUrl,
+  hint, setHint,
   competitorUrl, setCompetitorUrl,
   promptsText, setPromptsText,
-  count, onGo, onDemo,
+  manual, setManual,
+  manualCount,
+  onResearch, onManual, onDemo,
 }: InputProps) {
   return (
     <div className="flex min-h-[70vh] flex-col justify-center">
       <h1 className="text-5xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-7xl">
-        See why AI
+        We&rsquo;ll research
         <br />
         <span className="bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">
-          recommends them
+          how AI sees
         </span>
         <br />
-        over you.
+        your category.
       </h1>
       <p className="mt-5 max-w-md text-base text-[var(--ink-500)]">
-        Transparent scoring. Actionable fixes. One click to ship.
+        One URL in. We auto-discover the prompts your customers ask AI, the competitors AI
+        consistently recommends, and exactly why you&rsquo;re losing the citation.
       </p>
 
-      <div className="mt-12 grid max-w-2xl gap-4 sm:grid-cols-2">
+      <div className="mt-12 max-w-2xl space-y-4">
         <input
-          className="gf-input px-4 py-3 text-sm"
+          className="gf-input w-full px-4 py-3 text-sm"
           value={brandUrl}
           onChange={(e) => setBrandUrl(e.target.value)}
-          placeholder="Your URL"
+          placeholder="Your URL — e.g. https://yourbrand.com"
         />
-        <input
-          className="gf-input px-4 py-3 text-sm"
-          value={competitorUrl}
-          onChange={(e) => setCompetitorUrl(e.target.value)}
-          placeholder="Competitor URL"
-        />
+        {!manual && (
+          <input
+            className="gf-input w-full px-4 py-3 text-sm"
+            value={hint}
+            onChange={(e) => setHint(e.target.value)}
+            placeholder="Optional: 1-line hint about your category (e.g. 'B2B project mgmt for engineering teams')"
+          />
+        )}
+
+        {manual && (
+          <>
+            <input
+              className="gf-input w-full px-4 py-3 text-sm"
+              value={competitorUrl}
+              onChange={(e) => setCompetitorUrl(e.target.value)}
+              placeholder="Competitor URL"
+            />
+            <textarea
+              className="gf-input h-24 w-full px-4 py-3 font-mono text-xs"
+              value={promptsText}
+              onChange={(e) => setPromptsText(e.target.value)}
+              placeholder="Prompts — one per line, up to 5"
+            />
+          </>
+        )}
       </div>
-      <textarea
-        className="gf-input mt-4 h-24 max-w-2xl px-4 py-3 font-mono text-xs"
-        value={promptsText}
-        onChange={(e) => setPromptsText(e.target.value)}
-        placeholder="Prompts — one per line, up to 5"
-      />
-      <div className="mt-6 flex items-center gap-4">
-        <button
-          onClick={onGo}
-          disabled={count === 0}
-          className="gf-btn-primary px-7 py-3 text-sm font-semibold"
-        >
-          Diagnose
-        </button>
+
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+        {manual ? (
+          <button
+            onClick={onManual}
+            disabled={!brandUrl || !competitorUrl || manualCount === 0}
+            className="gf-btn-primary px-7 py-3 text-sm font-semibold"
+          >
+            Run manual diagnosis
+          </button>
+        ) : (
+          <button
+            onClick={onResearch}
+            disabled={!brandUrl}
+            className="gf-btn-primary px-7 py-3 text-sm font-semibold"
+          >
+            Run research
+          </button>
+        )}
         <button onClick={onDemo} className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]">
           Try demo
+        </button>
+        <button
+          onClick={() => setManual(!manual)}
+          className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]"
+        >
+          {manual ? '← Back to auto-research' : 'Or supply your own competitor & prompts →'}
         </button>
       </div>
     </div>
@@ -324,10 +365,156 @@ interface DiagnosisProps {
   onBack: () => void;
 }
 
+function CompetitorChip({ c }: { c: DiscoveredCompetitor }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-pink-100 bg-white/50 px-4 py-3">
+      <a
+        href={c.url}
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm font-medium text-[var(--ink-900)] hover:text-[var(--pink-600)]"
+      >
+        {c.domain}
+      </a>
+      <span className="font-mono text-xs text-[var(--ink-500)]">
+        {c.citationCount}/{c.promptCount}
+      </span>
+    </div>
+  );
+}
+
+function renderMarkdownToReact(md: string) {
+  // Very small renderer — handles headings, bullets, bold, and paragraph wraps.
+  // Keeps the deps light. Anything fancier and we'd reach for react-markdown.
+  const lines = md.split('\n');
+  const out: React.ReactNode[] = [];
+  let bulletBuf: string[] = [];
+  const flushBullets = () => {
+    if (bulletBuf.length === 0) return;
+    out.push(
+      <ul key={`ul-${out.length}`} className="my-3 space-y-1 pl-5 text-sm text-[var(--ink-700)]">
+        {bulletBuf.map((b, i) => (
+          <li key={i} className="list-disc">
+            {inline(b)}
+          </li>
+        ))}
+      </ul>,
+    );
+    bulletBuf = [];
+  };
+  const inline = (text: string): React.ReactNode => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((p, i) =>
+      p.startsWith('**') && p.endsWith('**') ? (
+        <strong key={i} className="text-[var(--ink-900)]">
+          {p.slice(2, -2)}
+        </strong>
+      ) : (
+        <span key={i}>{p}</span>
+      ),
+    );
+  };
+  for (const line of lines) {
+    if (line.startsWith('## ')) {
+      flushBullets();
+      out.push(
+        <h3
+          key={`h-${out.length}`}
+          className="mt-5 text-sm font-semibold text-[var(--ink-900)]"
+        >
+          {line.slice(3)}
+        </h3>,
+      );
+    } else if (line.startsWith('# ')) {
+      flushBullets();
+      out.push(
+        <h2
+          key={`h-${out.length}`}
+          className="mt-2 text-base font-semibold text-[var(--ink-900)]"
+        >
+          {line.slice(2)}
+        </h2>,
+      );
+    } else if (/^[-*]\s/.test(line)) {
+      bulletBuf.push(line.replace(/^[-*]\s/, ''));
+    } else if (line.trim()) {
+      flushBullets();
+      out.push(
+        <p key={`p-${out.length}`} className="my-2 text-sm leading-relaxed text-[var(--ink-700)]">
+          {inline(line)}
+        </p>,
+      );
+    } else {
+      flushBullets();
+    }
+  }
+  flushBullets();
+  return <>{out}</>;
+}
+
+function FindingsPanel({ research }: { research: ResearchFindings }) {
+  return (
+    <section className="space-y-6 rounded-2xl border border-pink-100 bg-white/40 p-6">
+      <div>
+        <p className="text-xs uppercase tracking-wide text-[var(--pink-600)]">
+          Research findings
+        </p>
+        <p className="mt-2 text-sm text-[var(--ink-700)]">
+          <span className="font-medium text-[var(--ink-900)]">{research.category}.</span>{' '}
+          {research.brandSummary}
+        </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+            Prompts we tested
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-[var(--ink-700)]">
+            {research.discoveredPrompts.map((p, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="font-mono text-xs text-[var(--ink-500)]">{i + 1}.</span>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+            Competitors AI surfaces
+          </p>
+          <p className="mt-1 text-xs text-[var(--ink-500)]">
+            <span className="font-mono">cited / prompts</span> · deep-dove against{' '}
+            <span className="font-medium text-[var(--ink-900)]">
+              {research.selectedCompetitorDomain}
+            </span>
+          </p>
+          <div className="mt-2 space-y-2">
+            {research.discoveredCompetitors.map((c) => (
+              <CompetitorChip key={c.domain} c={c} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {research.narrative && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-500)]">
+            Analysis
+          </p>
+          <div className="mt-2">{renderMarkdownToReact(research.narrative)}</div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
   const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
   return (
     <div className="space-y-12">
+      {analysis.research && <FindingsPanel research={analysis.research} />}
+
       {/* Score hero */}
       <div className="flex flex-col items-start gap-2">
         <p className="font-mono text-7xl font-bold text-[var(--ink-900)] sm:text-8xl">
@@ -580,6 +767,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const [brandUrl, setBrandUrl] = useState(DEFAULT_BRAND);
+  const [hint, setHint] = useState('');
+  const [manual, setManual] = useState(false);
   const [competitorUrl, setCompetitorUrl] = useState(DEFAULT_COMPETITOR);
   const [promptsText, setPromptsText] = useState(DEFAULT_PROMPTS);
 
@@ -668,22 +857,28 @@ export default function HomePage() {
     [promptsText],
   );
 
-  const analyze = async (demo?: boolean) => {
+  const analyze = async (mode: 'research' | 'manual' | 'demo') => {
     setError(null);
     setStep('analyzing');
+    const body: Record<string, unknown> =
+      mode === 'demo'
+        ? {
+            brandUrl: DEFAULT_BRAND,
+            competitorUrl: DEFAULT_COMPETITOR,
+            prompts: DEFAULT_PROMPTS.split('\n').filter(Boolean),
+          }
+        : mode === 'manual'
+          ? { brandUrl, competitorUrl, prompts }
+          : { brandUrl, hint: hint || undefined };
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          brandUrl: demo ? DEFAULT_BRAND : brandUrl,
-          competitorUrl: demo ? DEFAULT_COMPETITOR : competitorUrl,
-          prompts: demo ? DEFAULT_PROMPTS.split('\n').filter(Boolean) : prompts,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const b = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(b?.error ?? `HTTP ${res.status}`);
+        const b = (await res.json().catch(() => null)) as { error?: string; detail?: string } | null;
+        throw new Error(b?.detail ?? b?.error ?? `HTTP ${res.status}`);
       }
       setAnalysis((await res.json()) as AnalysisResult);
       setStep('diagnosis');
@@ -756,7 +951,7 @@ export default function HomePage() {
     setBrandUrl(DEFAULT_BRAND);
     setCompetitorUrl(DEFAULT_COMPETITOR);
     setPromptsText(DEFAULT_PROMPTS);
-    void analyze(true);
+    void analyze('demo');
   };
 
   return (
@@ -777,15 +972,20 @@ export default function HomePage() {
       {step === 'input' && (
         <InputStep
           brandUrl={brandUrl} setBrandUrl={setBrandUrl}
+          hint={hint} setHint={setHint}
           competitorUrl={competitorUrl} setCompetitorUrl={setCompetitorUrl}
           promptsText={promptsText} setPromptsText={setPromptsText}
-          count={prompts.length}
-          onGo={() => analyze()}
+          manual={manual} setManual={setManual}
+          manualCount={prompts.length}
+          onResearch={() => analyze('research')}
+          onManual={() => analyze('manual')}
           onDemo={demo}
         />
       )}
 
-      {step === 'analyzing' && <Spinner label="Querying AI engines…" />}
+      {step === 'analyzing' && (
+        <Spinner label={manual ? 'Querying AI engines…' : 'Researching your category — discovering prompts and competitors…'} />
+      )}
 
       {step === 'diagnosis' && analysis && (
         <DiagnosisStep analysis={analysis} onRepair={repair} onBack={() => setStep('input')} />
