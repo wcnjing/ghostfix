@@ -79,6 +79,35 @@ const FIX_EXT: Record<Fix['type'], string> = {
   schema: 'json',
 };
 
+const FIX_BLUEPRINT: Record<
+  Fix['type'],
+  {
+    feature: string;
+    placement: string;
+    outcome: string;
+    checklist: string[];
+  }
+> = {
+  faq: {
+    feature: 'Answer-ready FAQ module',
+    placement: 'Add near pricing, product, or comparison pages.',
+    outcome: 'Gives AI engines short, extractable answers to cite.',
+    checklist: ['One question per target prompt', 'Direct answer first', 'Evidence or metric in every answer'],
+  },
+  comparison_page: {
+    feature: 'Competitor comparison page',
+    placement: 'Publish at /compare or /vs/[competitor].',
+    outcome: 'Controls the side-by-side narrative before rivals do.',
+    checklist: ['Clear table', 'When to choose you', 'Fair competitor positioning'],
+  },
+  schema: {
+    feature: 'FAQPage structured data',
+    placement: 'Embed in the page head with matching visible FAQ copy.',
+    outcome: 'Makes the repair machine-readable for parsers and answer engines.',
+    checklist: ['Valid JSON-LD', 'Matches visible page content', 'One Question per prompt'],
+  },
+};
+
 const DEFAULT_BRAND = 'https://linear.app';
 const DEFAULT_COMPETITOR = 'https://www.atlassian.com/software/jira';
 const DEFAULT_PROMPTS = [
@@ -92,18 +121,21 @@ const DEFAULT_PROMPTS = [
 function StepIndicator({ step }: { step: Step }) {
   const active = STEP_INDEX[step];
   return (
-    <div className="flex items-center gap-2">
+    <div className="hidden items-center gap-2 rounded-full border border-pink-100 bg-white/70 px-3 py-2 shadow-sm sm:flex">
       {STEPS.map((label, i) => (
         <div key={label} className="flex items-center gap-2">
           <span
-            className={`text-xs font-medium transition-colors ${
-              i <= active ? 'text-[var(--ink-900)]' : 'text-[var(--ink-500)]/50'
+            className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-medium transition-all ${
+              i <= active
+                ? 'bg-[var(--ink-900)] text-white'
+                : 'text-[var(--ink-500)]/60'
             }`}
           >
+            <span className="font-mono text-[10px]">{i + 1}</span>
             {label}
           </span>
           {i < STEPS.length - 1 && (
-            <div className={`h-px w-5 ${i < active ? 'bg-[var(--ink-900)]' : 'bg-pink-200'}`} />
+            <div className={`h-px w-5 transition-colors ${i < active ? 'bg-[var(--ink-900)]' : 'bg-pink-200'}`} />
           )}
         </div>
       ))}
@@ -113,8 +145,9 @@ function StepIndicator({ step }: { step: Step }) {
 
 function Header({ step, ghUser, onLogout }: { step: Step; ghUser: GhUser | null; onLogout: () => void }) {
   return (
-    <header className="mb-16 flex items-center justify-between gap-4">
-      <span className="text-sm font-semibold tracking-tight text-[var(--ink-900)]">
+    <header className="sticky top-4 z-20 mb-14 flex items-center justify-between gap-4 rounded-full border border-pink-100 bg-white/75 px-4 py-3 shadow-sm backdrop-blur-xl">
+      <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-[var(--ink-900)]">
+        <span className="gf-pulse-ring h-2.5 w-2.5 rounded-full bg-[var(--pink-500)]" />
         GhostFix
       </span>
       <div className="flex items-center gap-4">
@@ -146,9 +179,20 @@ function Header({ step, ghUser, onLogout }: { step: Step; ghUser: GhUser | null;
 
 function Spinner({ label }: { label: string }) {
   return (
-    <div className="flex min-h-[65vh] flex-col items-center justify-center gap-5">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500" />
-      <p className="text-sm text-[var(--ink-500)]">{label}</p>
+    <div className="flex min-h-[65vh] flex-col items-center justify-center gap-6">
+      <div className="gf-glass relative h-40 w-72 overflow-hidden rounded-3xl p-5">
+        <div className="mb-5 flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-pink-300" />
+          <span className="h-2.5 w-2.5 rounded-full bg-pink-200" />
+          <span className="h-2.5 w-2.5 rounded-full bg-pink-100" />
+        </div>
+        <div className="space-y-3">
+          <div className="gf-shimmer h-4 w-44 rounded-full bg-pink-100" />
+          <div className="gf-shimmer h-4 w-56 rounded-full bg-pink-50" />
+          <div className="gf-shimmer h-10 w-full rounded-xl bg-white" />
+        </div>
+      </div>
+      <p className="text-sm font-medium text-[var(--ink-500)]">{label}</p>
     </div>
   );
 }
@@ -245,90 +289,149 @@ function InputStep({
   onResearch, onManual, onDemo, onTestFixture,
 }: InputProps) {
   return (
-    <div className="flex min-h-[70vh] flex-col justify-center">
-      <h1 className="text-5xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-7xl">
-        We&rsquo;ll research
-        <br />
-        <span className="bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">
-          how AI sees
-        </span>
-        <br />
-        your category.
-      </h1>
-      <p className="mt-5 max-w-md text-base text-[var(--ink-500)]">
-        One URL in. We auto-discover the prompts your customers ask AI, the competitors AI
-        consistently recommends, and exactly why you&rsquo;re losing the citation.
-      </p>
+    <div className="grid min-h-[70vh] items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="gf-enter">
+        <p className="mb-4 inline-flex rounded-full border border-pink-200 bg-pink-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--pink-600)]">
+          AI visibility repair
+        </p>
+        <h1 className="text-5xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-7xl">
+          See why AI
+          <br />
+          <span className="bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">
+            recommends rivals
+          </span>
+          <br />
+          first.
+        </h1>
+        <p className="mt-5 max-w-lg text-base leading-relaxed text-[var(--ink-500)]">
+          GhostFix researches your category, finds the prompts buyers ask, compares who gets
+          cited, and turns gaps into review-ready website fixes.
+        </p>
 
-      <div className="mt-12 max-w-2xl space-y-4">
-        <input
-          className="gf-input w-full px-4 py-3 text-sm"
-          value={brandUrl}
-          onChange={(e) => setBrandUrl(e.target.value)}
-          placeholder="Your URL — e.g. https://yourbrand.com"
-        />
-        {!manual && (
+        <div className="mt-8 grid max-w-lg grid-cols-3 gap-3">
+          {[
+            ['01', 'Research'],
+            ['02', 'Explain'],
+            ['03', 'Deploy'],
+          ].map(([n, label]) => (
+            <div key={label} className="gf-card rounded-2xl px-4 py-3">
+              <p className="font-mono text-[11px] text-[var(--pink-600)]">{n}</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--ink-900)]">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="gf-enter-delay-1 gf-glass rounded-3xl p-5">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[var(--ink-900)]">Start a diagnosis</p>
+            <p className="text-xs text-[var(--ink-500)]">
+              {manual ? `${manualCount}/5 prompts ready` : 'Auto-discovers prompts and rivals'}
+            </p>
+          </div>
+          <div className="rounded-full bg-pink-50 p-1 text-xs">
+            <button
+              onClick={() => setManual(false)}
+              className={`rounded-full px-3 py-1.5 ${!manual ? 'bg-white text-[var(--ink-900)] shadow-sm' : 'text-[var(--ink-500)]'}`}
+            >
+              Auto
+            </button>
+            <button
+              onClick={() => setManual(true)}
+              className={`rounded-full px-3 py-1.5 ${manual ? 'bg-white text-[var(--ink-900)] shadow-sm' : 'text-[var(--ink-500)]'}`}
+            >
+              Manual
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
           <input
             className="gf-input w-full px-4 py-3 text-sm"
-            value={hint}
-            onChange={(e) => setHint(e.target.value)}
-            placeholder="Optional: 1-line hint about your category (e.g. 'B2B project mgmt for engineering teams')"
+            value={brandUrl}
+            onChange={(e) => setBrandUrl(e.target.value)}
+            placeholder="Your URL — e.g. https://yourbrand.com"
           />
-        )}
-
-        {manual && (
-          <>
+          {!manual && (
             <input
               className="gf-input w-full px-4 py-3 text-sm"
-              value={competitorUrl}
-              onChange={(e) => setCompetitorUrl(e.target.value)}
-              placeholder="Competitor URL"
+              value={hint}
+              onChange={(e) => setHint(e.target.value)}
+              placeholder="Optional category hint"
             />
-            <textarea
-              className="gf-input h-24 w-full px-4 py-3 font-mono text-xs"
-              value={promptsText}
-              onChange={(e) => setPromptsText(e.target.value)}
-              placeholder="Prompts — one per line, up to 5"
-            />
-          </>
-        )}
-      </div>
+          )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        {manual ? (
-          <button
-            onClick={onManual}
-            disabled={!brandUrl || !competitorUrl || manualCount === 0}
-            className="gf-btn-primary px-7 py-3 text-sm font-semibold"
-          >
-            Run manual diagnosis
+          {manual && (
+            <>
+              <input
+                className="gf-input w-full px-4 py-3 text-sm"
+                value={competitorUrl}
+                onChange={(e) => setCompetitorUrl(e.target.value)}
+                placeholder="Competitor URL"
+              />
+              <textarea
+                className="gf-input h-24 w-full px-4 py-3 font-mono text-xs"
+                value={promptsText}
+                onChange={(e) => setPromptsText(e.target.value)}
+                placeholder="Prompts — one per line, up to 5"
+              />
+            </>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {manual ? (
+            <button
+              onClick={onManual}
+              disabled={!brandUrl || !competitorUrl || manualCount === 0}
+              className="gf-btn-primary px-6 py-3 text-sm font-semibold"
+            >
+              Run diagnosis
+            </button>
+          ) : (
+            <button
+              onClick={onResearch}
+              disabled={!brandUrl}
+              className="gf-btn-primary px-6 py-3 text-sm font-semibold"
+            >
+              Run research
+            </button>
+          )}
+          <button onClick={onDemo} className="rounded-full px-3 py-2 text-sm text-[var(--ink-500)] hover:bg-pink-50 hover:text-[var(--pink-600)]">
+            Try demo
           </button>
-        ) : (
           <button
-            onClick={onResearch}
-            disabled={!brandUrl}
-            className="gf-btn-primary px-7 py-3 text-sm font-semibold"
+            onClick={onTestFixture}
+            className="rounded-full px-3 py-2 text-sm text-[var(--ink-500)] hover:bg-pink-50 hover:text-[var(--pink-600)]"
+            title="Loads two built-in fake landing pages so you can see the scoring + repair flow end-to-end"
           >
-            Run research
+            Test fixture
           </button>
-        )}
-        <button onClick={onDemo} className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]">
-          Try demo
-        </button>
-        <button
-          onClick={onTestFixture}
-          className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]"
-          title="Loads two built-in fake landing pages so you can see the scoring + repair flow end-to-end"
-        >
-          Use test fixture
-        </button>
-        <button
-          onClick={() => setManual(!manual)}
-          className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]"
-        >
-          {manual ? '← Back to auto-research' : 'Or supply your own competitor & prompts →'}
-        </button>
-      </div>
+        </div>
+
+        <div className="gf-float mt-6 rounded-2xl border border-pink-100 bg-white/70 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-pink-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-pink-200" />
+            <span className="h-2.5 w-2.5 rounded-full bg-pink-100" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded-xl bg-pink-50 p-3">
+              <p className="font-semibold">Prompts</p>
+              <p className="mt-1 font-mono text-lg">5</p>
+            </div>
+            <div className="rounded-xl bg-white p-3">
+              <p className="font-semibold">Rivals</p>
+              <p className="mt-1 font-mono text-lg">3</p>
+            </div>
+            <div className="rounded-xl bg-[var(--ink-900)] p-3 text-white">
+              <p className="font-semibold">Fixes</p>
+              <p className="mt-1 font-mono text-lg">3</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -384,16 +487,53 @@ function MetricTile({
   label,
   value,
   sub,
+  accent,
 }: {
   label: string;
   value: React.ReactNode;
   sub?: React.ReactNode;
+  accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-[#e5e5e5] px-4 py-4">
+    <div className={`gf-card rounded-2xl px-4 py-4 ${accent ? 'bg-pink-50' : ''}`}>
       <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">{label}</p>
       <p className="mt-1.5 font-mono text-2xl font-bold text-[var(--ink-900)]">{value}</p>
       {sub && <p className="mt-1 text-[11px] text-[var(--ink-500)]">{sub}</p>}
+    </div>
+  );
+}
+
+function ScoreDial({ score, max }: { score: number; max: number }) {
+  const pct = Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+  return (
+    <div className="gf-card gf-enter rounded-3xl p-6">
+      <div className="flex flex-wrap items-center gap-6">
+        <div
+          className="grid h-36 w-36 place-items-center rounded-full"
+          style={{
+            background: `conic-gradient(var(--pink-500) ${pct}%, var(--pink-100) 0)`,
+          }}
+        >
+          <div className="grid h-28 w-28 place-items-center rounded-full bg-white">
+            <div className="text-center">
+              <p className="font-mono text-4xl font-bold text-[var(--ink-900)]">{score}</p>
+              <p className="text-xs text-[var(--ink-500)]">/{max}</p>
+            </div>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">
+            Diagnosis summary
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--ink-900)]">
+            Your AI visibility gap is measurable.
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--ink-500)]">
+            GhostFix turns citation loss into a concrete repair plan: content to add, schema to ship,
+            and a PR you can review before deploying.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -506,11 +646,14 @@ function FindingsDashboard({
 
   return (
     <div className="space-y-10">
+      <ScoreDial score={analysis.score} max={totalMax} />
+
       {/* Hero metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricTile
           label="Score"
           value={<>{analysis.score}<span className="text-sm text-[var(--ink-500)]">/{totalMax}</span></>}
+          accent
         />
         <MetricTile
           label="Citation share"
@@ -528,7 +671,7 @@ function FindingsDashboard({
       </div>
 
       {/* Category + summary */}
-      <div className="rounded-xl border border-[#e5e5e5] px-5 py-4">
+      <div className="gf-card rounded-2xl px-5 py-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Category</p>
         <p className="mt-1 text-sm font-medium text-[var(--ink-900)]">{research.category}</p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--ink-700)]">{research.brandSummary}</p>
@@ -536,7 +679,7 @@ function FindingsDashboard({
 
       {/* Prompts + leaderboard side by side */}
       <div className="grid gap-4 lg:grid-cols-5">
-        <section className="rounded-xl border border-[#e5e5e5] p-5 lg:col-span-3">
+        <section className="gf-card rounded-2xl p-5 lg:col-span-3">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Prompts tested</p>
           <div>
             {analysis.prompts.map((prompt, i) => {
@@ -559,7 +702,7 @@ function FindingsDashboard({
           </div>
         </section>
 
-        <section className="rounded-xl border border-[#e5e5e5] p-5 lg:col-span-2">
+        <section className="gf-card rounded-2xl p-5 lg:col-span-2">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Competitor leaderboard</p>
           <div className="divide-y divide-[#f0f0f0]">
             {research.discoveredCompetitors.map((c) => (
@@ -571,7 +714,7 @@ function FindingsDashboard({
 
       {/* Narrative */}
       {research.narrative && (
-        <section className="rounded-xl border border-[#e5e5e5] p-5">
+        <section className="gf-card rounded-2xl p-5">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Analysis</p>
           <div className="prose-tight">{renderMarkdownToReact(research.narrative)}</div>
         </section>
@@ -591,7 +734,7 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
 
       {/* Score — only in manual mode */}
       {!hasResearch && (
-        <div className="rounded-xl border border-[#e5e5e5] px-5 py-5">
+        <div className="gf-card rounded-2xl px-5 py-5">
           <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">AI visibility score</p>
           <p className="mt-2 font-mono text-7xl font-bold text-[var(--ink-900)]">
             {analysis.score}<span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
@@ -600,7 +743,7 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       )}
 
       {/* Breakdown */}
-      <section className="rounded-xl border border-[#e5e5e5] p-5">
+      <section className="gf-card rounded-2xl p-5">
         <p className="mb-4 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Breakdown</p>
         <div className="space-y-3">
           {analysis.scoreBreakdown.dimensions.map((d) => (
@@ -610,7 +753,7 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       </section>
 
       {/* Citations */}
-      <section className="rounded-xl border border-[#e5e5e5] p-5">
+      <section className="gf-card rounded-2xl p-5">
         <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
           Citations · {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
         </p>
@@ -622,7 +765,7 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       </section>
 
       {/* Issues */}
-      <section className="rounded-xl border border-[#e5e5e5] p-5">
+      <section className="gf-card rounded-2xl p-5">
         <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Issues</p>
         <div>
           {analysis.issues.map((iss, i) => (
@@ -654,8 +797,125 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
 
 // ─── Step 3: Repair ──────────────────────────────────────────────────────────
 
+// Descriptions of what each fix type does for the user.
+const FIX_DESC: Record<Fix['type'], string> = {
+  faq: 'Add an FAQ section so AI engines can cite direct answers from your site.',
+  comparison_page: 'Publish a comparison page that positions you against the competitor.',
+  schema: 'Embed structured data so search and AI engines parse your content correctly.',
+};
+
+function renderFixPreview(content: string, type: Fix['type']): React.ReactNode {
+  if (type === 'schema') {
+    // Parse JSON-LD and show it as a clean structured list
+    try {
+      const parsed = JSON.parse(content) as { mainEntity?: { name?: string; acceptedAnswer?: { text?: string } }[] };
+      if (parsed.mainEntity && Array.isArray(parsed.mainEntity)) {
+        return (
+          <div className="space-y-3">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">FAQPage schema preview</p>
+            {parsed.mainEntity.map((q, i) => (
+              <div key={i} className="rounded-lg bg-[#fafafa] px-4 py-3">
+                <p className="text-sm font-medium text-[var(--ink-900)]">{q.name}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--ink-700)]">{q.acceptedAnswer?.text}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    } catch { /* fall through to raw */ }
+    return (
+      <pre className="max-h-48 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
+        {content}
+      </pre>
+    );
+  }
+
+  // Markdown: render as styled HTML preview
+  const lines = content.split('\n');
+  const nodes: React.ReactNode[] = [];
+  let bulletBuf: string[] = [];
+
+  const flushBullets = () => {
+    if (bulletBuf.length === 0) return;
+    nodes.push(
+      <ul key={`ul-${nodes.length}`} className="my-2 space-y-1 pl-4 text-sm text-[var(--ink-700)]">
+        {bulletBuf.map((b, i) => <li key={i} className="list-disc">{b}</li>)}
+      </ul>,
+    );
+    bulletBuf = [];
+  };
+
+  for (const line of lines) {
+    if (line.startsWith('# ')) {
+      flushBullets();
+      nodes.push(<h2 key={`h-${nodes.length}`} className="mt-4 text-base font-semibold text-[var(--ink-900)]">{line.slice(2)}</h2>);
+    } else if (line.startsWith('## ')) {
+      flushBullets();
+      nodes.push(<h3 key={`h-${nodes.length}`} className="mt-3 text-sm font-semibold text-[var(--ink-900)]">{line.slice(3)}</h3>);
+    } else if (line.startsWith('| ')) {
+      // Table row — collect into a simple table
+      flushBullets();
+      const cells = line.split('|').filter(Boolean).map((c) => c.trim());
+      if (cells.every((c) => /^[-:]+$/.test(c))) continue; // skip separator
+      nodes.push(
+        <div key={`tr-${nodes.length}`} className="grid grid-cols-3 gap-2 border-b border-[#f0f0f0] py-1.5 text-xs text-[var(--ink-700)] first:font-medium first:text-[var(--ink-900)]">
+          {cells.slice(0, 3).map((cell, ci) => <span key={ci}>{cell.replace(/_/g, '')}</span>)}
+        </div>,
+      );
+    } else if (/^[-*]\s/.test(line)) {
+      bulletBuf.push(line.replace(/^[-*]\s/, ''));
+    } else if (line.trim()) {
+      flushBullets();
+      nodes.push(<p key={`p-${nodes.length}`} className="my-1.5 text-sm leading-relaxed text-[var(--ink-700)]">{line}</p>);
+    } else {
+      flushBullets();
+    }
+  }
+  flushBullets();
+  return <div className="rounded-lg bg-[#fafafa] px-4 py-4">{nodes}</div>;
+}
+
+function FeatureBlueprint({ type }: { type: Fix['type'] }) {
+  const blueprint = FIX_BLUEPRINT[type];
+  return (
+    <div className="rounded-2xl border border-pink-100 bg-pink-50/60 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">
+            Recommended feature
+          </p>
+          <h4 className="mt-1 text-lg font-semibold text-[var(--ink-900)]">{blueprint.feature}</h4>
+          <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]">{blueprint.outcome}</p>
+        </div>
+        <div className="hidden h-16 w-20 shrink-0 rounded-xl border border-pink-200 bg-white p-2 sm:block">
+          <div className="mb-1 h-2 w-10 rounded-full bg-pink-300" />
+          <div className="mb-1 h-2 w-14 rounded-full bg-pink-100" />
+          <div className="h-7 rounded-lg bg-[var(--ink-900)]" />
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-xl bg-white/80 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Where it goes</p>
+          <p className="mt-1 text-sm font-medium text-[var(--ink-900)]">{blueprint.placement}</p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Implementation checklist</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {blueprint.checklist.map((item) => (
+              <span key={item} className="rounded-full border border-pink-100 bg-white px-2.5 py-1 text-[11px] text-[var(--ink-700)]">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FixCard({ fix }: { fix: Fix }) {
   const [copied, setCopied] = useState(false);
+  const [showSource, setShowSource] = useState(false);
 
   const copy = async () => {
     await navigator.clipboard.writeText(fix.content);
@@ -676,10 +936,13 @@ function FixCard({ fix }: { fix: Fix }) {
   };
 
   return (
-    <div className="rounded-xl border border-[#e5e5e5] p-4">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="gf-card gf-enter rounded-3xl p-5">
+      <div className="mb-1 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--ink-900)]">{FIX_LABEL[fix.type]}</h3>
         <div className="flex gap-3 text-xs">
+          <button onClick={() => setShowSource(!showSource)} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
+            {showSource ? 'Preview' : 'Source'}
+          </button>
           <button onClick={copy} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
             {copied ? 'Copied ✓' : 'Copy'}
           </button>
@@ -688,9 +951,19 @@ function FixCard({ fix }: { fix: Fix }) {
           </button>
         </div>
       </div>
-      <pre className="max-h-56 overflow-auto rounded-lg bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
-        {fix.content}
-      </pre>
+      <p className="mb-3 text-xs text-[var(--ink-500)]">{FIX_DESC[fix.type]}</p>
+
+      <FeatureBlueprint type={fix.type} />
+
+      {showSource ? (
+        <pre className="mt-4 max-h-56 overflow-auto rounded-2xl bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
+          {fix.content}
+        </pre>
+      ) : (
+        <div className="mt-4 max-h-80 overflow-auto rounded-2xl border border-[#eeeeee] bg-white p-2">
+          {renderFixPreview(fix.content, fix.type)}
+        </div>
+      )}
     </div>
   );
 }
@@ -703,6 +976,8 @@ interface RepairProps {
   loadingRepos: boolean;
   selectedRepo: string;
   setSelectedRepo: (v: string) => void;
+  targetBranch: string;
+  setTargetBranch: (v: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onPublish: () => void;
@@ -717,6 +992,8 @@ function RepairStep({
   loadingRepos,
   selectedRepo,
   setSelectedRepo,
+  targetBranch,
+  setTargetBranch,
   onConnect,
   onDisconnect,
   onPublish,
@@ -728,12 +1005,16 @@ function RepairStep({
 
   return (
     <div className="space-y-12">
-      <div>
+      <div className="gf-enter">
+        <p className="mb-3 inline-flex rounded-full border border-pink-200 bg-pink-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--pink-600)]">
+          Repair plan
+        </p>
         <h1 className="text-4xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-5xl">
-          Fixes
+          Website features to ship next.
         </h1>
-        <p className="mt-2 text-sm text-[var(--ink-500)]">
-          Nothing ships without your approval.
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-500)]">
+          Each recommendation is shown as a product feature first, with the generated copy or schema
+          underneath. Source is still available when you need it.
         </p>
       </div>
 
@@ -744,7 +1025,7 @@ function RepairStep({
       </div>
 
       {/* GitHub publish section */}
-      <section className="rounded-xl border border-[#e5e5e5] p-5 space-y-4">
+      <section className="gf-card rounded-3xl p-5 space-y-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Ship</p>
 
         {ghUser ? (
@@ -778,6 +1059,12 @@ function RepairStep({
                 </option>
               ))}
             </select>
+            <input
+              className="gf-input mt-2 w-full px-4 py-3 text-sm"
+              value={targetBranch}
+              onChange={(e) => setTargetBranch(e.target.value)}
+              placeholder="Target branch (leave empty for repo default)"
+            />
           </div>
         ) : !usingEnv ? (
           <div className="flex items-center gap-4">
@@ -813,7 +1100,8 @@ function RepairStep({
 
 function DoneStep({ prUrl, branch, onRestart }: { prUrl: string; branch: string; onRestart: () => void }) {
   return (
-    <div className="flex min-h-[65vh] flex-col justify-center">
+    <div className="grid min-h-[65vh] items-center gap-8 lg:grid-cols-[1fr_0.8fr]">
+      <section className="gf-enter">
       <h1 className="text-5xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-7xl">
         Shipped.
       </h1>
@@ -833,6 +1121,20 @@ function DoneStep({ prUrl, branch, onRestart }: { prUrl: string; branch: string;
           Start over
         </button>
       </div>
+      </section>
+      <section className="gf-glass gf-float rounded-3xl p-6">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">Review-gated PR</p>
+        <div className="mt-5 space-y-3">
+          {['FAQ module', 'Comparison page', 'JSON-LD schema'].map((item, i) => (
+            <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/80 p-3">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-pink-50 font-mono text-xs text-[var(--pink-600)]">
+                {i + 1}
+              </span>
+              <span className="text-sm font-medium text-[var(--ink-900)]">{item}</span>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -862,6 +1164,7 @@ export default function HomePage() {
   const [repos, setRepos] = useState<GhRepo[] | null>(null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState('');
+  const [targetBranch, setTargetBranch] = useState('');
 
   // Initial probe + handle the OAuth redirect query params.
   useEffect(() => {
@@ -995,6 +1298,7 @@ export default function HomePage() {
     try {
       const body: Record<string, unknown> = { analysis, fixes };
       if (ghUser && selectedRepo) body.repo = selectedRepo;
+      if (targetBranch.trim()) body.base = targetBranch.trim();
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -1052,7 +1356,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10 sm:px-10 sm:py-14">
+    <main className="gf-shell mx-auto max-w-6xl px-6 py-6 sm:px-10 sm:py-10">
       <Header step={step} ghUser={ghUser} onLogout={disconnect} />
 
       {error && (
@@ -1100,6 +1404,8 @@ export default function HomePage() {
           loadingRepos={loadingRepos}
           selectedRepo={selectedRepo}
           setSelectedRepo={setSelectedRepo}
+          targetBranch={targetBranch}
+          setTargetBranch={setTargetBranch}
           onConnect={() => {
             window.location.href = '/api/auth/github';
           }}
