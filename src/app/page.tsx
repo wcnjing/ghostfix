@@ -383,10 +383,10 @@ function MetricTile({
   sub?: React.ReactNode;
 }) {
   return (
-    <div className="py-3">
+    <div className="rounded-xl border border-[#e5e5e5] px-4 py-4">
       <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-bold text-[var(--ink-900)]">{value}</p>
-      {sub && <p className="mt-0.5 text-[11px] text-[var(--ink-500)]">{sub}</p>}
+      <p className="mt-1.5 font-mono text-2xl font-bold text-[var(--ink-900)]">{value}</p>
+      {sub && <p className="mt-1 text-[11px] text-[var(--ink-500)]">{sub}</p>}
     </div>
   );
 }
@@ -500,7 +500,7 @@ function FindingsDashboard({
   return (
     <div className="space-y-10">
       {/* Hero metrics */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricTile
           label="Score"
           value={<>{analysis.score}<span className="text-sm text-[var(--ink-500)]">/{totalMax}</span></>}
@@ -521,23 +521,23 @@ function FindingsDashboard({
       </div>
 
       {/* Category + summary */}
-      <div>
+      <div className="rounded-xl border border-[#e5e5e5] px-5 py-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Category</p>
-        <p className="mt-1 text-sm text-[var(--ink-900)]">{research.category}</p>
+        <p className="mt-1 text-sm font-medium text-[var(--ink-900)]">{research.category}</p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--ink-700)]">{research.brandSummary}</p>
       </div>
 
       {/* Prompts + leaderboard side by side */}
-      <div className="grid gap-8 lg:grid-cols-5">
-        <section className="lg:col-span-3">
+      <div className="grid gap-4 lg:grid-cols-5">
+        <section className="rounded-xl border border-[#e5e5e5] p-5 lg:col-span-3">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Prompts tested</p>
-          <div className="space-y-1.5">
+          <div>
             {analysis.prompts.map((prompt, i) => {
               const cit = analysis.citations[i];
               const brandIn = cit && cit.brandCitedCount > 0;
               const compIn = cit && cit.competitorCitedCount > 0;
               return (
-                <div key={i} className="flex items-center gap-3 border-b border-[#f0f0f0] py-2 last:border-0">
+                <div key={i} className="flex items-center gap-3 border-b border-[#f0f0f0] py-2.5 last:border-0">
                   <span className="font-mono text-[11px] text-[var(--ink-500)]">{String(i + 1).padStart(2, '0')}</span>
                   <p className="flex-1 text-sm text-[var(--ink-900)]">{prompt}</p>
                   <span className={`text-[11px] font-medium ${brandIn ? 'text-emerald-600' : 'text-rose-500'}`}>
@@ -552,7 +552,7 @@ function FindingsDashboard({
           </div>
         </section>
 
-        <section className="lg:col-span-2">
+        <section className="rounded-xl border border-[#e5e5e5] p-5 lg:col-span-2">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Competitor leaderboard</p>
           <div className="divide-y divide-[#f0f0f0]">
             {research.discoveredCompetitors.map((c) => (
@@ -564,7 +564,7 @@ function FindingsDashboard({
 
       {/* Narrative */}
       {research.narrative && (
-        <section>
+        <section className="rounded-xl border border-[#e5e5e5] p-5">
           <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Analysis</p>
           <div className="prose-tight">{renderMarkdownToReact(research.narrative)}</div>
         </section>
@@ -577,14 +577,14 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
   const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
   const hasResearch = !!analysis.research;
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       {hasResearch && analysis.research && (
         <FindingsDashboard research={analysis.research} analysis={analysis} />
       )}
 
       {/* Score — only in manual mode */}
       {!hasResearch && (
-        <div>
+        <div className="rounded-xl border border-[#e5e5e5] px-5 py-5">
           <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">AI visibility score</p>
           <p className="mt-2 font-mono text-7xl font-bold text-[var(--ink-900)]">
             {analysis.score}<span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
@@ -593,9 +593,9 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       )}
 
       {/* Breakdown */}
-      <section>
+      <section className="rounded-xl border border-[#e5e5e5] p-5">
         <p className="mb-4 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Breakdown</p>
-        <div className="max-w-lg space-y-3">
+        <div className="space-y-3">
           {analysis.scoreBreakdown.dimensions.map((d) => (
             <Bar key={d.dimension} d={d} />
           ))}
@@ -603,11 +603,11 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       </section>
 
       {/* Citations */}
-      <section>
+      <section className="rounded-xl border border-[#e5e5e5] p-5">
         <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
           Citations · {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
         </p>
-        <div className="space-y-1.5">
+        <div>
           {analysis.citations.map((c, i) => (
             <CitationRow key={i} c={c} />
           ))}
@@ -615,9 +615,9 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       </section>
 
       {/* Issues */}
-      <section>
+      <section className="rounded-xl border border-[#e5e5e5] p-5">
         <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Issues</p>
-        <div className="space-y-2">
+        <div>
           {analysis.issues.map((iss, i) => (
             <div key={i} className="flex items-start gap-3 border-b border-[#f0f0f0] py-2.5 last:border-0">
               <span className={`mt-0.5 text-[11px] font-semibold uppercase ${severity(iss.severity)}`}>
@@ -633,7 +633,7 @@ function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
       </section>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 pt-2">
         <button onClick={onRepair} className="gf-btn-primary px-7 py-3 text-sm font-semibold">
           Generate fixes
         </button>
@@ -669,7 +669,7 @@ function FixCard({ fix }: { fix: Fix }) {
   };
 
   return (
-    <div className="border-b border-[#f0f0f0] pb-5 last:border-0 last:pb-0">
+    <div className="rounded-xl border border-[#e5e5e5] p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--ink-900)]">{FIX_LABEL[fix.type]}</h3>
         <div className="flex gap-3 text-xs">
@@ -737,7 +737,7 @@ function RepairStep({
       </div>
 
       {/* GitHub publish section */}
-      <section className="space-y-4">
+      <section className="rounded-xl border border-[#e5e5e5] p-5 space-y-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Ship</p>
 
         {ghUser ? (
