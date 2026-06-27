@@ -225,6 +225,7 @@ interface InputProps {
   onResearch: () => void;
   onManual: () => void;
   onDemo: () => void;
+  onTestFixture: () => void;
 }
 
 function InputStep({
@@ -234,7 +235,7 @@ function InputStep({
   promptsText, setPromptsText,
   manual, setManual,
   manualCount,
-  onResearch, onManual, onDemo,
+  onResearch, onManual, onDemo, onTestFixture,
 }: InputProps) {
   return (
     <div className="flex min-h-[70vh] flex-col justify-center">
@@ -306,6 +307,13 @@ function InputStep({
         )}
         <button onClick={onDemo} className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]">
           Try demo
+        </button>
+        <button
+          onClick={onTestFixture}
+          className="text-sm text-[var(--ink-500)] hover:text-[var(--pink-600)]"
+          title="Loads two built-in fake landing pages so you can see the scoring + repair flow end-to-end"
+        >
+          Use test fixture
         </button>
         <button
           onClick={() => setManual(!manual)}
@@ -1158,6 +1166,26 @@ export default function HomePage() {
     void analyze('demo');
   };
 
+  // Prefills the inputs with the built-in fake landing pages under
+  // public/demo-sites/ so the full diagnose→repair→ship flow can be tested
+  // end-to-end without depending on real third-party sites.
+  const testFixture = () => {
+    const origin = window.location.origin;
+    setManual(true);
+    setBrandUrl(`${origin}/demo-sites/weak/`);
+    setCompetitorUrl(`${origin}/demo-sites/strong/`);
+    setPromptsText(
+      [
+        'best project management for engineering teams',
+        'vertex vs spectra',
+        'cheapest sprint planning tool with git integration',
+        'is spectra worth it for startups',
+        'top alternatives to vertex',
+      ].join('\n'),
+    );
+    setError(null);
+  };
+
   return (
     <main className="mx-auto max-w-4xl px-6 py-10 sm:px-10 sm:py-14">
       <Header step={step} ghUser={ghUser} />
@@ -1184,6 +1212,7 @@ export default function HomePage() {
           onResearch={() => analyze('research')}
           onManual={() => analyze('manual')}
           onDemo={demo}
+          onTestFixture={testFixture}
         />
       )}
 
