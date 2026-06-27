@@ -5,6 +5,7 @@
 
 import * as cheerio from 'cheerio';
 
+import { generateJson, generateText } from '@/lib/llm';
 import type {
   AnalysisResult,
   CrawlSignals,
@@ -17,7 +18,6 @@ const UA =
   'Mozilla/5.0 (compatible; GhostfixBot/0.1; +https://ghostfix.local) Chrome/120 Safari/537.36';
 const PPLX_URL = 'https://api.perplexity.ai/chat/completions';
 const PPLX_MODEL = 'sonar';
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
 
 function domainOf(input: string): string {
   try {
@@ -66,65 +66,6 @@ async function fetchBrandSummary(url: string): Promise<BrandSummary> {
   }
 }
 
-// ─── Gemini helper ───────────────────────────────────────────────────────────
-
-interface GeminiResp {
-  candidates?: { content?: { parts?: { text?: string }[] } }[];
-}
-
-async function callGeminiJson<T>(prompt: string, schemaHint: string): Promise<T | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${prompt}\n\n${schemaHint}` }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 2000,
-          temperature: 0.5,
-        },
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as GeminiResp;
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      const m = text.match(/\{[\s\S]*\}/);
-      if (m) return JSON.parse(m[0]) as T;
-      return null;
-    }
-  } catch {
-    return null;
-  }
-}
-
-async function callGeminiText(prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 1500, temperature: 0.6 },
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as GeminiResp;
-    return data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').trim() ?? null;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Brand summary + category + prompts ──────────────────────────────────────
 
 interface SummarizeOutput {
@@ -149,7 +90,7 @@ async function summarizeAndDiscoverPrompts(
     ],
   };
 
-  const result = await callGeminiJson<SummarizeOutput>(
+  const result = await generateJson<SummarizeOutput>(
     [
       `You're researching a brand for AI-visibility analysis.`,
       `Brand domain: ${brand.domain}`,
@@ -354,7 +295,7 @@ async function synthesizeNarrative(
     ...analysis.issues.slice(0, 5).map((i) => `- **[${i.severity}]** ${i.title} — ${i.why}`),
   ].join('\n');
 
-  const llm = await callGeminiText(
+  const llm = await generateText(
     [
       `You're writing a short, punchy "AI visibility research report" for a brand.`,
       ``,
