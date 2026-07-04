@@ -1129,9 +1129,156 @@ function FeatureBlueprint({ type }: { type: Fix['type'] }) {
   );
 }
 
+function buildVisualPreviewHtml(content: string, type: Fix['type']): string {
+  // Build a complete HTML page that renders the fix content as it would look on a real website.
+  const baseStyles = `
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #1a1a2e;
+        background: #ffffff;
+        padding: 32px 40px;
+        font-size: 15px;
+      }
+      h1 { font-size: 28px; font-weight: 700; margin-bottom: 16px; color: #0f0f1a; }
+      h2 { font-size: 20px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; color: #1a1a2e; }
+      h3 { font-size: 16px; font-weight: 600; margin-top: 20px; margin-bottom: 8px; color: #2d2d44; }
+      p { margin-bottom: 12px; color: #4a4a6a; }
+      ul, ol { margin: 12px 0; padding-left: 24px; }
+      li { margin-bottom: 6px; color: #4a4a6a; }
+      strong { color: #1a1a2e; font-weight: 600; }
+      blockquote {
+        border-left: 3px solid #e91e63;
+        margin: 16px 0;
+        padding: 12px 20px;
+        background: #fef4f7;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+        color: #555;
+      }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; border-radius: 8px; overflow: hidden; }
+      th { background: #f8f9fa; text-align: left; padding: 12px 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #e0e0e0; }
+      td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+      tr:hover td { background: #fafafa; }
+      code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+      pre { background: #f8f9fa; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 13px; }
+      .badge { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; margin: 4px 4px 4px 0; }
+      .section { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #f0f0f0; }
+      .section:last-child { border-bottom: none; }
+      .hero { background: linear-gradient(135deg, #fef4f7 0%, #fff 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+      .hero h1 { margin-bottom: 8px; }
+      .metric { display: inline-flex; align-items: baseline; gap: 4px; background: #f8f9fa; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 14px; }
+      .metric strong { color: #e91e63; }
+      .cta { display: inline-block; background: #1a1a2e; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; text-decoration: none; margin-top: 12px; }
+      .card { border: 1px solid #eee; border-radius: 12px; padding: 20px; margin: 12px 0; }
+      .testimonial { background: #fafafa; border-radius: 12px; padding: 20px; margin: 12px 0; }
+      .testimonial .name { font-weight: 600; font-size: 13px; color: #1a1a2e; margin-top: 8px; }
+    </style>
+  `;
+
+  if (type === 'schema') {
+    // Render JSON-LD as a structured preview showing how it appears to AI parsers
+    let schemaHtml = '';
+    try {
+      const parsed = JSON.parse(content);
+      const schemaType = parsed['@type'] || 'Schema';
+      schemaHtml = `<div class="hero"><h1>📋 ${schemaType}</h1><p style="color:#666">How AI parsers see your structured data</p></div>`;
+      if (parsed.mainEntity && Array.isArray(parsed.mainEntity)) {
+        schemaHtml += '<div class="section">';
+        for (const item of parsed.mainEntity) {
+          schemaHtml += `<div class="card"><h3>${item.name || 'Question'}</h3><p>${item.acceptedAnswer?.text || ''}</p></div>`;
+        }
+        schemaHtml += '</div>';
+      } else {
+        schemaHtml += `<pre>${JSON.stringify(parsed, null, 2)}</pre>`;
+      }
+    } catch {
+      schemaHtml = `<pre>${content}</pre>`;
+    }
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">${baseStyles}</head><body>${schemaHtml}</body></html>`;
+  }
+
+  // Convert markdown to HTML for all other types
+  let html = '';
+  const lines = content.split('\n');
+  let inList = false;
+  let inTable = false;
+  let tableHeaders: string[] = [];
+
+  for (const line of lines) {
+    // Close open list if needed
+    if (inList && !/^[-*]\s/.test(line) && !/^\d+\.\s/.test(line)) {
+      html += '</ul>';
+      inList = false;
+    }
+    if (inTable && !line.startsWith('|')) {
+      html += '</tbody></table>';
+      inTable = false;
+    }
+
+    if (line.startsWith('# ')) {
+      html += `<div class="hero"><h1>${escapeHtml(line.slice(2))}</h1></div>`;
+    } else if (line.startsWith('## ')) {
+      html += `<h2>${escapeHtml(line.slice(3))}</h2>`;
+    } else if (line.startsWith('### ')) {
+      html += `<h3>${escapeHtml(line.slice(4))}</h3>`;
+    } else if (line.startsWith('> ')) {
+      html += `<blockquote>${inlineMarkdown(line.slice(2))}</blockquote>`;
+    } else if (line.startsWith('| ')) {
+      const cells = line.split('|').filter(Boolean).map(c => c.trim());
+      if (cells.every(c => /^[-:]+$/.test(c))) continue; // separator row
+      if (!inTable) {
+        inTable = true;
+        tableHeaders = cells;
+        html += '<table><thead><tr>';
+        for (const cell of cells) html += `<th>${escapeHtml(cell)}</th>`;
+        html += '</tr></thead><tbody>';
+      } else {
+        html += '<tr>';
+        for (const cell of cells) html += `<td>${inlineMarkdown(cell)}</td>`;
+        html += '</tr>';
+      }
+    } else if (/^[-*]\s/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${inlineMarkdown(line.replace(/^[-*]\s/, ''))}</li>`;
+    } else if (/^\d+\.\s/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${inlineMarkdown(line.replace(/^\d+\.\s/, ''))}</li>`;
+    } else if (line.trim() === '') {
+      // skip blank lines
+    } else {
+      html += `<p>${inlineMarkdown(line)}</p>`;
+    }
+  }
+  if (inList) html += '</ul>';
+  if (inTable) html += '</tbody></table>';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${baseStyles}</head><body>${html}</body></html>`;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function inlineMarkdown(text: string): string {
+  let result = escapeHtml(text);
+  // Bold
+  result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Inline code
+  result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Placeholders like [X%] get highlighted
+  result = result.replace(/\[([^\]]+)\]/g, '<span class="badge">$1</span>');
+  return result;
+}
+
 function FixCard({ fix }: { fix: Fix }) {
   const [copied, setCopied] = useState(false);
   const [showSource, setShowSource] = useState(false);
+  const [showVisualPreview, setShowVisualPreview] = useState(false);
 
   const copy = async () => {
     await navigator.clipboard.writeText(fix.content);
@@ -1151,13 +1298,21 @@ function FixCard({ fix }: { fix: Fix }) {
     URL.revokeObjectURL(url);
   };
 
+  const previewHtml = useMemo(() => buildVisualPreviewHtml(fix.content, fix.type), [fix.content, fix.type]);
+
   return (
     <div className="gf-card gf-enter rounded-3xl p-5">
       <div className="mb-1 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--ink-900)]">{FIX_LABEL[fix.type]}</h3>
         <div className="flex gap-3 text-xs">
-          <button onClick={() => setShowSource(!showSource)} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
-            {showSource ? 'Preview' : 'Source'}
+          <button
+            onClick={() => { setShowVisualPreview(!showVisualPreview); if (!showVisualPreview) setShowSource(false); }}
+            className={`rounded-full px-2.5 py-1 transition-colors ${showVisualPreview ? 'bg-pink-50 text-[var(--pink-600)] font-medium' : 'text-[var(--ink-500)] hover:text-[var(--ink-900)]'}`}
+          >
+            {showVisualPreview ? 'Hide Preview' : 'Show Preview'}
+          </button>
+          <button onClick={() => { setShowSource(!showSource); if (!showSource) setShowVisualPreview(false); }} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
+            {showSource ? 'Content' : 'Source'}
           </button>
           <button onClick={copy} className="text-[var(--ink-500)] hover:text-[var(--ink-900)]">
             {copied ? 'Copied ✓' : 'Copy'}
@@ -1171,7 +1326,23 @@ function FixCard({ fix }: { fix: Fix }) {
 
       <FeatureBlueprint type={fix.type} />
 
-      {showSource ? (
+      {showVisualPreview ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pink-200 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-pink-100 bg-pink-50/60 px-4 py-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+            <span className="ml-2 text-[11px] text-[var(--ink-500)]">Visual preview — how this looks on your site</span>
+          </div>
+          <iframe
+            srcDoc={previewHtml}
+            title={`Visual preview of ${FIX_LABEL[fix.type]}`}
+            className="w-full border-0"
+            style={{ height: '420px' }}
+            sandbox="allow-same-origin"
+          />
+        </div>
+      ) : showSource ? (
         <pre className="mt-4 max-h-56 overflow-auto rounded-2xl bg-[#fafafa] p-3 font-mono text-xs whitespace-pre-wrap text-[var(--ink-700)]">
           {fix.content}
         </pre>
@@ -1186,6 +1357,7 @@ function FixCard({ fix }: { fix: Fix }) {
 
 interface RepairProps {
   fixes: Fix[];
+  analysis: AnalysisResult;
   caps: PublishCaps;
   ghUser: GhUser | null;
   repos: GhRepo[] | null;
@@ -1200,8 +1372,99 @@ interface RepairProps {
   onBack: () => void;
 }
 
+/** Map an issue's dimension to the fix types it corresponds to. */
+function issueToFixTypes(dimension: ScoreDimension): Fix['type'][] {
+  switch (dimension) {
+    case 'share_of_answer': return ['answer_content'];
+    case 'content_coverage': return ['comparison_page', 'answer_content'];
+    case 'structured_data': return ['schema'];
+    case 'evidence_density': return ['evidence_stats'];
+    case 'freshness_trust': return ['trust_signals', 'freshness_update'];
+    default: return [];
+  }
+}
+
+function IssueFixCard({ issue, fix, index }: { issue: Issue; fix: Fix | null; index: number }) {
+  const [showPreview, setShowPreview] = useState(false);
+  const previewHtml = useMemo(
+    () => (fix ? buildVisualPreviewHtml(fix.content, fix.type) : ''),
+    [fix],
+  );
+
+  return (
+    <div className="gf-card gf-enter rounded-3xl p-5">
+      {/* Issue header */}
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--ink-900)] font-mono text-[11px] font-bold text-white">
+          {index}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex h-5 items-center rounded px-1.5 text-[10px] font-semibold uppercase ${
+              issue.severity === 'high' ? 'bg-rose-100 text-rose-600' :
+              issue.severity === 'medium' ? 'bg-amber-100 text-amber-600' :
+              'bg-emerald-100 text-emerald-600'
+            }`}>
+              {issue.severity}
+            </span>
+            <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Issue</p>
+          </div>
+          <h3 className="mt-1.5 text-base font-semibold text-[var(--ink-900)]">{issue.title}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--ink-500)]">{issue.why}</p>
+        </div>
+      </div>
+
+      {/* Suggestion */}
+      {fix && (
+        <div className="mt-5 rounded-2xl border border-pink-100 bg-pink-50/60 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">
+                Suggestion
+              </p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink-900)]">
+                {FIX_LABEL[fix.type]}: {FIX_DESC[fix.type]}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                showPreview
+                  ? 'bg-[var(--ink-900)] text-white'
+                  : 'border border-pink-200 bg-white text-[var(--pink-600)] hover:bg-pink-50'
+              }`}
+            >
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Visual preview */}
+      {showPreview && fix && (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pink-200 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-pink-100 bg-pink-50/60 px-4 py-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+            <span className="ml-2 text-[11px] text-[var(--ink-500)]">Preview — how this fix looks on your site</span>
+          </div>
+          <iframe
+            srcDoc={previewHtml}
+            title={`Preview of fix for: ${issue.title}`}
+            className="w-full border-0"
+            style={{ height: '420px' }}
+            sandbox="allow-same-origin"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RepairStep({
   fixes,
+  analysis,
   caps,
   ghUser,
   repos,
@@ -1219,6 +1482,19 @@ function RepairStep({
   const usingEnv = !usingOauth && caps.canPublishFromEnv;
   const publishReady = usingOauth ? !!selectedRepo : usingEnv;
 
+  // Pair each issue with its most relevant fix
+  const issueFixes = useMemo(() => {
+    return analysis.issues.map((issue) => {
+      const relevantTypes = issueToFixTypes(issue.dimension);
+      const matchingFix = fixes.find((f) => relevantTypes.includes(f.type)) ?? null;
+      return { issue, fix: matchingFix };
+    });
+  }, [analysis.issues, fixes]);
+
+  // Collect any fixes not mapped to an issue (extra suggestions)
+  const mappedFixIds = new Set(issueFixes.map((pair) => pair.fix?.id).filter(Boolean));
+  const unmappedFixes = fixes.filter((f) => !mappedFixIds.has(f.id));
+
   return (
     <div className="space-y-12">
       <div className="gf-enter">
@@ -1226,19 +1502,29 @@ function RepairStep({
           Repair plan
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-[var(--ink-900)] sm:text-5xl">
-          Website features to ship next.
+          Issues & suggested fixes.
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-500)]">
-          Each recommendation is shown as a product feature first, with the generated copy or schema
-          underneath. Source is still available when you need it.
+          Each issue from your diagnosis is paired with a suggested code change. Click &ldquo;Show Preview&rdquo; to see how the fix renders on a real page.
         </p>
       </div>
 
+      {/* Issue → Suggestion → Preview cards */}
       <div className="space-y-5">
-        {fixes.map((f) => (
-          <FixCard key={f.id} fix={f} />
+        {issueFixes.map(({ issue, fix }, i) => (
+          <IssueFixCard key={i} issue={issue} fix={fix} index={i + 1} />
         ))}
       </div>
+
+      {/* Any extra fix suggestions not tied to a specific issue */}
+      {unmappedFixes.length > 0 && (
+        <div className="space-y-5">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Additional suggestions</p>
+          {unmappedFixes.map((f) => (
+            <FixCard key={f.id} fix={f} />
+          ))}
+        </div>
+      )}
 
       {/* GitHub publish section */}
       <section className="gf-card rounded-3xl p-5 space-y-4">
@@ -1417,9 +1703,9 @@ export default function HomePage() {
             });
           }
         }
-        // If they're already connected (or there's no OAuth at all), skip the
-        // Connect screen and drop them straight into the input form.
-        if (connected || !nextCaps.oauthConfigured) {
+        // If they're already connected, skip the Connect screen.
+        // Otherwise always show it so users link GitHub first.
+        if (connected) {
           setStep('input');
         }
       } catch {
@@ -1630,6 +1916,7 @@ export default function HomePage() {
       {step === 'repair' && fixes && (
         <RepairStep
           fixes={fixes}
+          analysis={analysis!}
           caps={caps}
           ghUser={ghUser}
           repos={repos}
