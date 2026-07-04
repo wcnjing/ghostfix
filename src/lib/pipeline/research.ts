@@ -419,6 +419,7 @@ function fallbackCompetitors(
       citationCount: Math.max(1, prompts.length - index - (competitor.promptHits > 0 ? 0 : 1)),
       promptCount: prompts.length,
       sampleTitle: competitor.sampleTitle,
+      provenance: 'estimated' as const,
     }))
     .sort((a, b) => b.citationCount - a.citationCount)
     .slice(0, 5);
@@ -494,6 +495,7 @@ async function discoverCompetitorsViaLlm(
       citationCount,
       promptCount: prompts.length,
       sampleTitle: typeof item.sampleTitle === 'string' ? item.sampleTitle : undefined,
+      provenance: 'estimated',
     });
   }
 
@@ -542,6 +544,7 @@ async function discoverCompetitorsViaPerplexity(
       citationCount: v.count,
       promptCount: prompts.length,
       sampleTitle: v.title,
+      provenance: 'measured' as const,
     }))
     .sort((a, b) => b.citationCount - a.citationCount)
     .slice(0, 5);
@@ -566,7 +569,7 @@ async function synthesizeNarrative(
     `**Top AI-cited competitors:** ${discoveredCompetitors.map((c) => c.domain).join(', ') || 'none discovered'}`,
     `**Deepest gap is against:** ${selectedCompetitor}`,
     ``,
-    `### Visibility score: ${analysis.score}/100`,
+    `### Visibility score: ${analysis.score}/${analysis.scoreBreakdown.availableMax}`,
     ``,
     ...analysis.scoreBreakdown.dimensions.map(
       (d) => `- **${d.dimension.replace(/_/g, ' ')}:** ${d.score}/${d.max} — ${d.reasons[0] ?? ''}`,
@@ -583,7 +586,7 @@ async function synthesizeNarrative(
       ``,
       `Brand: ${brand.domain} — ${brand.description || brand.title}`,
       `Category: ${category}`,
-      `Score: ${analysis.score}/100`,
+      `Score: ${analysis.score}/${analysis.scoreBreakdown.availableMax} (dimensions we couldn't measure are excluded from the denominator)`,
       ``,
       `Competitors AI consistently surfaces in this category:`,
       discoveredCompetitors.map((c) => `- ${c.domain} (cited in ${c.citationCount}/${c.promptCount} discovery prompts)`).join('\n'),
@@ -626,22 +629,18 @@ export interface ResearchDiscovery {
 export async function discover(brandUrl: string, hint?: string): Promise<ResearchDiscovery> {
   const brand = await fetchBrandSummary(brandUrl);
   const { category, summary, prompts } = await summarizeAndDiscoverPrompts(brand, hint);
-  const llmCompetitors = await discoverCompetitorsViaLlm(brand, category, summary, prompts);
-  const competitors =
-    llmCompetitors && llmCompetitors.length > 0
-      ? llmCompetitors
-      : (await discoverCompetitorsViaPerplexity(prompts, brand.domain)).competitors;
 
-  return {
-    brand,
-    category,
-    summary,
-    prompts,
-    competitors:
-      competitors.length > 0
-        ? competitors
-        : fallbackCompetitors(prompts, brand.domain, category, brand.title, summary),
-  };
+  // Measured beats guessed: real Perplexity citations first, LLM estimate
+  // second (labelled as such), static category fallback last.
+  let competitors = (await discoverCompetitorsViaPerplexity(prompts, brand.domain)).competitors;
+  if (competitors.length === 0) {
+    competitors = (await discoverCompetitorsViaLlm(brand, category, summary, prompts)) ?? [];
+  }
+  if (competitors.length === 0) {
+    competitors = fallbackCompetitors(prompts, brand.domain, category, brand.title, summary);
+  }
+
+  return { brand, category, summary, prompts, competitors };
 }
 
 /** Step 2: given a finished analysis, build the narrative findings report. */

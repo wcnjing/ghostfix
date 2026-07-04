@@ -9,7 +9,6 @@ import type {
   DiscoveredCompetitor,
   Fix,
   Issue,
-  ResearchFindings,
   ScoreDimension,
 } from '@/lib/types';
 
@@ -438,35 +437,45 @@ function InputStep({
 
 // ─── Step 2: Diagnosis ───────────────────────────────────────────────────────
 
-function Bar({ d }: { d: DimensionScore }) {
-  const pct = (d.score / d.max) * 100;
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+function EstBadge() {
   return (
-    <div className="space-y-1">
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="font-medium text-[var(--ink-900)]">{DIM_LABEL[d.dimension]}</span>
-        <span className="font-mono text-[var(--ink-500)]">{d.score}/{d.max}</span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-pink-100">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-400 transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
+    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-amber-700">
+      est.
+    </span>
   );
 }
 
-function CitationRow({ c }: { c: Citation }) {
-  const bPct = Math.round(c.brandFrequency * 100);
-  const cPct = Math.round(c.competitorFrequency * 100);
+function Bar({ d }: { d: DimensionScore }) {
+  const unavailable = d.provenance === 'unavailable';
+  const pct = unavailable ? 0 : (d.score / d.max) * 100;
   return (
-    <div className="flex items-center gap-4 border-b border-[#f0f0f0] py-2.5 last:border-0">
-      <p className="flex-1 text-sm text-[var(--ink-900)]">{c.prompt}</p>
-      <div className="flex items-center gap-2 font-mono text-xs">
-        <span className={bPct > 0 ? 'text-emerald-600' : 'text-rose-500'}>{bPct}%</span>
-        <span className="text-[var(--ink-500)]">/</span>
-        <span className="text-[var(--ink-700)]">{cPct}%</span>
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className="flex items-center gap-1.5 font-medium text-[var(--ink-900)]">
+          {DIM_LABEL[d.dimension]}
+          {d.provenance === 'estimated' && <EstBadge />}
+        </span>
+        <span className="font-mono text-[var(--ink-500)]">
+          {unavailable ? 'not measured' : `${d.score}/${d.max}`}
+        </span>
       </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-pink-100">
+        {!unavailable && (
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-400 transition-all duration-500"
+            style={{ width: `${pct}%` }}
+          />
+        )}
+      </div>
+      <p className="text-[11px] leading-relaxed text-[var(--ink-500)]">{d.reasons[0]}</p>
     </div>
   );
 }
@@ -483,57 +492,205 @@ interface DiagnosisProps {
   onBack: () => void;
 }
 
-function MetricTile({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <div className={`gf-card rounded-2xl px-4 py-4 ${accent ? 'bg-pink-50' : ''}`}>
-      <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">{label}</p>
-      <p className="mt-1.5 font-mono text-2xl font-bold text-[var(--ink-900)]">{value}</p>
-      {sub && <p className="mt-1 text-[11px] text-[var(--ink-500)]">{sub}</p>}
-    </div>
-  );
-}
+// Verdict headline built from the measured data — this is the "so what" the
+// user should be able to read in five seconds.
+function VerdictCard({ analysis }: { analysis: AnalysisResult }) {
+  const brandDomain = domainOf(analysis.brandUrl);
+  const competitorDomain = domainOf(analysis.competitorUrl);
+  const scored = analysis.citations.filter((c) => c.provenance !== 'unavailable');
+  const brandIn = scored.filter((c) => c.brandFrequency > 0).length;
+  const compIn = scored.filter((c) => c.competitorFrequency > 0).length;
+  const max = analysis.scoreBreakdown.availableMax;
+  const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((analysis.score / max) * 100))) : 0;
+  const recoverable = analysis.issues.reduce((s, i) => s + i.estPointGain, 0);
 
-function ScoreDial({ score, max }: { score: number; max: number }) {
-  const pct = Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+  const verdict =
+    scored.length === 0
+      ? `We couldn't collect AI answer data for ${brandDomain} this run.`
+      : brandIn === 0
+        ? `AI never mentioned ${brandDomain} across ${scored.length} buyer prompts — ${competitorDomain} showed up in ${compIn}.`
+        : brandIn < compIn
+          ? `${brandDomain} appeared in ${brandIn} of ${scored.length} buyer prompts; ${competitorDomain} appeared in ${compIn}.`
+          : `${brandDomain} appeared in ${brandIn} of ${scored.length} buyer prompts, holding its own against ${competitorDomain} (${compIn}).`;
+
   return (
     <div className="gf-card gf-enter rounded-3xl p-6">
       <div className="flex flex-wrap items-center gap-6">
         <div
-          className="grid h-36 w-36 place-items-center rounded-full"
-          style={{
-            background: `conic-gradient(var(--pink-500) ${pct}%, var(--pink-100) 0)`,
-          }}
+          className="grid h-32 w-32 shrink-0 place-items-center rounded-full"
+          style={{ background: `conic-gradient(var(--pink-500) ${pct}%, var(--pink-100) 0)` }}
         >
-          <div className="grid h-28 w-28 place-items-center rounded-full bg-white">
+          <div className="grid h-24 w-24 place-items-center rounded-full bg-white">
             <div className="text-center">
-              <p className="font-mono text-4xl font-bold text-[var(--ink-900)]">{score}</p>
+              <p className="font-mono text-3xl font-bold text-[var(--ink-900)]">{analysis.score}</p>
               <p className="text-xs text-[var(--ink-500)]">/{max}</p>
             </div>
           </div>
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">
-            Diagnosis summary
+            {analysis.research ? analysis.research.category : 'AI visibility diagnosis'}
           </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--ink-900)]">
-            Your AI visibility gap is measurable.
+          <h2 className="mt-2 text-2xl font-semibold leading-snug tracking-tight text-[var(--ink-900)] sm:text-3xl">
+            {verdict}
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--ink-500)]">
-            GhostFix turns citation loss into a concrete repair plan: content to add, schema to ship,
-            and a PR you can review before deploying.
+            {analysis.research?.brandSummary ? `${analysis.research.brandSummary} ` : ''}
+            {recoverable > 0
+              ? `The fixes below can recover up to ${recoverable} of the ${max - analysis.score} points you're leaving on the table.`
+              : 'No scoreable gaps found in this run.'}
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Honest labelling of anything we couldn't measure or had to estimate.
+function DataQualityNotes({ analysis }: { analysis: AnalysisResult }) {
+  const notes: string[] = [];
+  const brand = analysis.signals?.brand;
+  const competitor = analysis.signals?.competitor;
+  if (brand && !brand.fetched) {
+    notes.push(
+      `We couldn't crawl ${domainOf(brand.url)} (blocked or unreachable). On-page checks are excluded from the score — not guessed.`,
+    );
+  }
+  if (competitor && !competitor.fetched) {
+    notes.push(
+      `We couldn't crawl the competitor site (${domainOf(competitor.url)}); comparisons use absolute baselines instead.`,
+    );
+  }
+  if (analysis.citations.some((c) => c.provenance === 'estimated')) {
+    notes.push(
+      'Answer-engine numbers are an LLM estimate (no Perplexity key configured) — treat them as directional, not measured.',
+    );
+  }
+  if (analysis.citations.length > 0 && analysis.citations.every((c) => c.provenance === 'unavailable')) {
+    notes.push('No AI answer data could be collected for these prompts this run.');
+  }
+  if (notes.length === 0) return null;
+  return (
+    <div className="space-y-1 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+      {notes.map((n, i) => (
+        <p key={i} className="text-xs leading-relaxed text-amber-800">
+          ⚠ {n}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+type Presence = 'cited' | 'named' | 'absent' | 'unknown';
+
+function presenceOf(c: Citation, side: 'brand' | 'competitor'): Presence {
+  if (c.provenance === 'unavailable') return 'unknown';
+  const cited = side === 'brand' ? c.brandCitedCount : c.competitorCitedCount;
+  const named = side === 'brand' ? c.brandMentionedCount : c.competitorMentionedCount;
+  if (cited > 0) return 'cited';
+  if (named > 0) return 'named';
+  return 'absent';
+}
+
+function PresencePill({ presence, freq }: { presence: Presence; freq: number }) {
+  const styles: Record<Presence, string> = {
+    cited: 'bg-emerald-50 text-emerald-700',
+    named: 'bg-sky-50 text-sky-700',
+    absent: 'bg-rose-50 text-rose-600',
+    unknown: 'bg-gray-100 text-gray-500',
+  };
+  const label: Record<Presence, string> = {
+    cited: `cited · ${Math.round(freq * 100)}%`,
+    named: `named · ${Math.round(freq * 100)}%`,
+    absent: 'absent',
+    unknown: 'no data',
+  };
+  return (
+    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[presence]}`}>
+      {label[presence]}
+    </span>
+  );
+}
+
+// One table = the whole story per prompt: who showed up, how often, and what
+// the AI actually said (the receipt).
+function PromptResults({ analysis }: { analysis: AnalysisResult }) {
+  const brandDomain = domainOf(analysis.brandUrl);
+  const competitorDomain = domainOf(analysis.competitorUrl);
+  return (
+    <section className="gf-card rounded-2xl p-5">
+      <div className="mb-3 flex items-baseline justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+          Where you show up · {analysis.citations[0]?.runs || 0} runs per prompt
+        </p>
+        <p className="text-[11px] text-[var(--ink-500)]">
+          you = {brandDomain} · rival = {competitorDomain}
+        </p>
+      </div>
+      <div>
+        {analysis.citations.map((c, i) => (
+          <div key={i} className="border-b border-[#f0f0f0] py-3 last:border-0">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] text-[var(--ink-500)]">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <p className="flex-1 text-sm font-medium text-[var(--ink-900)]">{c.prompt}</p>
+              <div className="flex items-center gap-2">
+                {c.provenance === 'estimated' && <EstBadge />}
+                <PresencePill presence={presenceOf(c, 'brand')} freq={c.brandFrequency} />
+                <span className="text-[10px] text-[var(--ink-500)]">vs</span>
+                <PresencePill presence={presenceOf(c, 'competitor')} freq={c.competitorFrequency} />
+              </div>
+            </div>
+            {c.answerSnippet && (
+              <p className="mt-1.5 pl-8 text-xs leading-relaxed text-[var(--ink-500)]">
+                <span className="font-medium text-[var(--ink-700)]">AI said:</span> “{c.answerSnippet}”
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function IssueCard({ issue, rank }: { issue: Issue; rank: number }) {
+  return (
+    <div className="gf-card rounded-2xl p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-pink-50 font-mono text-xs text-[var(--pink-600)]">
+            {rank}
+          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold text-[var(--ink-900)]">{issue.title}</h3>
+              <span className={`text-[10px] font-semibold uppercase ${severity(issue.severity)}`}>
+                {issue.severity}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--ink-500)]">{issue.why}</p>
+          </div>
+        </div>
+        <span className="whitespace-nowrap rounded-full bg-[var(--ink-900)] px-2.5 py-1 font-mono text-[11px] font-semibold text-white">
+          +{issue.estPointGain} pts
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 pl-10 sm:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-xl bg-pink-50/60 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Do this</p>
+          <p className="mt-0.5 text-xs font-medium leading-relaxed text-[var(--ink-900)]">{issue.action}</p>
+        </div>
+        <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-pink-100">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Where</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--ink-700)]">{issue.where}</p>
+        </div>
+      </div>
+      {issue.fixType && (
+        <p className="mt-2 pl-10 text-[11px] text-[var(--ink-500)]">
+          → “Generate fixes” drafts the {FIX_LABEL[issue.fixType]} for you.
+        </p>
+      )}
     </div>
   );
 }
@@ -545,7 +702,6 @@ function CompetitorLeaderboardRow({
   c: DiscoveredCompetitor;
   selected: boolean;
 }) {
-  const pct = c.promptCount > 0 ? Math.round((c.citationCount / c.promptCount) * 100) : 0;
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="flex items-center gap-2">
@@ -555,8 +711,11 @@ function CompetitorLeaderboardRow({
             rival
           </span>
         )}
+        {c.provenance === 'estimated' && <EstBadge />}
       </div>
-      <span className="font-mono text-xs text-[var(--ink-500)]">{pct}%</span>
+      <span className="font-mono text-xs text-[var(--ink-500)]">
+        {c.citationCount}/{c.promptCount} prompts
+      </span>
     </div>
   );
 }
@@ -630,157 +789,86 @@ function renderMarkdownToReact(md: string) {
   return <>{out}</>;
 }
 
-function FindingsDashboard({
-  research,
-  analysis,
-}: {
-  research: ResearchFindings;
-  analysis: AnalysisResult;
-}) {
-  const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
-  const promptsWithBrand = analysis.citations.filter((c) => c.brandCitedCount > 0).length;
-  const citationShare =
-    analysis.citations.length > 0
-      ? Math.round((promptsWithBrand / analysis.citations.length) * 100)
-      : 0;
-
-  return (
-    <div className="space-y-10">
-      <ScoreDial score={analysis.score} max={totalMax} />
-
-      {/* Hero metrics */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricTile
-          label="Score"
-          value={<>{analysis.score}<span className="text-sm text-[var(--ink-500)]">/{totalMax}</span></>}
-          accent
-        />
-        <MetricTile
-          label="Citation share"
-          value={`${citationShare}%`}
-          sub={`${promptsWithBrand} of ${analysis.citations.length} prompts`}
-        />
-        <MetricTile
-          label="Competitors"
-          value={research.discoveredCompetitors.length}
-        />
-        <MetricTile
-          label="Top rival"
-          value={<span className="text-lg">{research.selectedCompetitorDomain}</span>}
-        />
-      </div>
-
-      {/* Category + summary */}
-      <div className="gf-card rounded-2xl px-5 py-4">
-        <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Category</p>
-        <p className="mt-1 text-sm font-medium text-[var(--ink-900)]">{research.category}</p>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--ink-700)]">{research.brandSummary}</p>
-      </div>
-
-      {/* Prompts + leaderboard side by side */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        <section className="gf-card rounded-2xl p-5 lg:col-span-3">
-          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Prompts tested</p>
-          <div>
-            {analysis.prompts.map((prompt, i) => {
-              const cit = analysis.citations[i];
-              const brandIn = cit && cit.brandCitedCount > 0;
-              const compIn = cit && cit.competitorCitedCount > 0;
-              return (
-                <div key={i} className="flex items-center gap-3 border-b border-[#f0f0f0] py-2.5 last:border-0">
-                  <span className="font-mono text-[11px] text-[var(--ink-500)]">{String(i + 1).padStart(2, '0')}</span>
-                  <p className="flex-1 text-sm text-[var(--ink-900)]">{prompt}</p>
-                  <span className={`text-[11px] font-medium ${brandIn ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {brandIn ? 'cited' : 'absent'}
-                  </span>
-                  <span className={`text-[11px] ${compIn ? 'text-[var(--ink-700)]' : 'text-[var(--ink-500)]'}`}>
-                    {compIn ? 'rival ✓' : '—'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="gf-card rounded-2xl p-5 lg:col-span-2">
-          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Competitor leaderboard</p>
-          <div className="divide-y divide-[#f0f0f0]">
-            {research.discoveredCompetitors.map((c) => (
-              <CompetitorLeaderboardRow key={c.domain} c={c} selected={c.domain === research.selectedCompetitorDomain} />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Narrative */}
-      {research.narrative && (
-        <section className="gf-card rounded-2xl p-5">
-          <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Analysis</p>
-          <div className="prose-tight">{renderMarkdownToReact(research.narrative)}</div>
-        </section>
-      )}
-    </div>
-  );
-}
-
 function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
-  const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
-  const hasResearch = !!analysis.research;
+  const research = analysis.research;
+  const topIssues = analysis.issues.slice(0, 3);
+  const moreIssues = analysis.issues.slice(3);
+
   return (
     <div className="space-y-6">
-      {hasResearch && analysis.research && (
-        <FindingsDashboard research={analysis.research} analysis={analysis} />
+      {/* 1. The verdict — score + what it means, in one glance. */}
+      <VerdictCard analysis={analysis} />
+      <DataQualityNotes analysis={analysis} />
+
+      {/* 2. The evidence — per-prompt results with what the AI actually said. */}
+      <PromptResults analysis={analysis} />
+
+      {/* 3. The plan — top fixes as concrete actions. */}
+      {topIssues.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between px-1">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+              What to fix first
+            </p>
+            <button onClick={onRepair} className="gf-btn-primary px-5 py-2 text-xs font-semibold">
+              Generate fixes
+            </button>
+          </div>
+          {topIssues.map((iss, i) => (
+            <IssueCard key={`${iss.dimension}-${iss.title}`} issue={iss} rank={i + 1} />
+          ))}
+          {moreIssues.length > 0 && (
+            <details className="gf-card rounded-2xl p-5">
+              <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+                {moreIssues.length} more issue{moreIssues.length > 1 ? 's' : ''}
+              </summary>
+              <div className="mt-3 space-y-3">
+                {moreIssues.map((iss, i) => (
+                  <IssueCard key={`${iss.dimension}-${iss.title}`} issue={iss} rank={topIssues.length + i + 1} />
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
       )}
 
-      {/* Score — only in manual mode */}
-      {!hasResearch && (
-        <div className="gf-card rounded-2xl px-5 py-5">
-          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-500)]">AI visibility score</p>
-          <p className="mt-2 font-mono text-7xl font-bold text-[var(--ink-900)]">
-            {analysis.score}<span className="text-2xl text-[var(--ink-500)]">/{totalMax}</span>
-          </p>
-        </div>
-      )}
-
-      {/* Breakdown */}
-      <section className="gf-card rounded-2xl p-5">
-        <p className="mb-4 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Breakdown</p>
-        <div className="space-y-3">
+      {/* 4. The receipts — details for anyone who wants to audit the score. */}
+      <details className="gf-card rounded-2xl p-5">
+        <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+          Score breakdown · {analysis.score}/{analysis.scoreBreakdown.availableMax}
+        </summary>
+        <div className="mt-4 space-y-4">
           {analysis.scoreBreakdown.dimensions.map((d) => (
             <Bar key={d.dimension} d={d} />
           ))}
         </div>
-      </section>
+      </details>
 
-      {/* Citations */}
-      <section className="gf-card rounded-2xl p-5">
-        <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
-          Citations · {[...new Set(analysis.citations.map((c) => c.engine))].join(', ')}
-        </p>
-        <div>
-          {analysis.citations.map((c, i) => (
-            <CitationRow key={i} c={c} />
-          ))}
-        </div>
-      </section>
+      {research && research.discoveredCompetitors.length > 0 && (
+        <details className="gf-card rounded-2xl p-5">
+          <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+            Competitor leaderboard · {research.discoveredCompetitors.length} discovered
+          </summary>
+          <div className="mt-3 divide-y divide-[#f0f0f0]">
+            {research.discoveredCompetitors.map((c) => (
+              <CompetitorLeaderboardRow
+                key={c.domain}
+                c={c}
+                selected={c.domain === research.selectedCompetitorDomain}
+              />
+            ))}
+          </div>
+        </details>
+      )}
 
-      {/* Issues */}
-      <section className="gf-card rounded-2xl p-5">
-        <p className="mb-3 text-[10px] uppercase tracking-wider text-[var(--ink-500)]">Issues</p>
-        <div>
-          {analysis.issues.map((iss, i) => (
-            <div key={i} className="flex items-start gap-3 border-b border-[#f0f0f0] py-2.5 last:border-0">
-              <span className={`mt-0.5 text-[11px] font-semibold uppercase ${severity(iss.severity)}`}>
-                {iss.severity}
-              </span>
-              <div>
-                <p className="text-sm font-medium text-[var(--ink-900)]">{iss.title}</p>
-                <p className="text-xs text-[var(--ink-500)]">{iss.why}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {research?.narrative && (
+        <details className="gf-card rounded-2xl p-5">
+          <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-[var(--ink-500)]">
+            Full research report
+          </summary>
+          <div className="prose-tight mt-3">{renderMarkdownToReact(research.narrative)}</div>
+        </details>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-4 pt-2">
@@ -1098,7 +1186,18 @@ function RepairStep({
 
 // ─── Step 4: Done ────────────────────────────────────────────────────────────
 
-function DoneStep({ prUrl, branch, onRestart }: { prUrl: string; branch: string; onRestart: () => void }) {
+function DoneStep({
+  prUrl,
+  branch,
+  fixes,
+  onRestart,
+}: {
+  prUrl: string;
+  branch: string;
+  fixes: Fix[] | null;
+  onRestart: () => void;
+}) {
+  const shipped = fixes?.map((f) => FIX_LABEL[f.type]) ?? [];
   return (
     <div className="grid min-h-[65vh] items-center gap-8 lg:grid-cols-[1fr_0.8fr]">
       <section className="gf-enter">
@@ -1125,7 +1224,7 @@ function DoneStep({ prUrl, branch, onRestart }: { prUrl: string; branch: string;
       <section className="gf-glass gf-float rounded-3xl p-6">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--pink-600)]">Review-gated PR</p>
         <div className="mt-5 space-y-3">
-          {['FAQ module', 'Comparison page', 'JSON-LD schema'].map((item, i) => (
+          {(shipped.length > 0 ? shipped : ['Repair drafts']).map((item, i) => (
             <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/80 p-3">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-pink-50 font-mono text-xs text-[var(--pink-600)]">
                 {i + 1}
@@ -1350,8 +1449,10 @@ export default function HomePage() {
   // end-to-end without depending on real third-party sites.
   const testFixture = () => {
     const origin = window.location.origin;
-    const fixtureBrandUrl = `${origin}/demo-sites/weak/`;
-    const fixtureCompetitorUrl = `${origin}/demo-sites/strong/`;
+    // Explicit index.html — Next's public folder doesn't resolve directory
+    // indexes, and the crawler now reports honest failures instead of mocks.
+    const fixtureBrandUrl = `${origin}/demo-sites/weak/index.html`;
+    const fixtureCompetitorUrl = `${origin}/demo-sites/strong/index.html`;
     const fixturePrompts = [
       'best project management for engineering teams',
       'vertex vs spectra',
@@ -1434,7 +1535,7 @@ export default function HomePage() {
       {step === 'publishing' && <Spinner label="Opening PR…" />}
 
       {step === 'done' && pr && (
-        <DoneStep prUrl={pr.prUrl} branch={pr.branch} onRestart={restart} />
+        <DoneStep prUrl={pr.prUrl} branch={pr.branch} fixes={fixes} onRestart={restart} />
       )}
     </main>
   );
