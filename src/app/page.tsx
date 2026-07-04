@@ -758,7 +758,9 @@ function FindingsDashboard({
   research: ResearchFindings;
   analysis: AnalysisResult;
 }) {
-  const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
+  const totalMax =
+    analysis.scoreBreakdown.availableMax ??
+    analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
   const promptsWithBrand = analysis.citations.filter((c) => c.brandCitedCount > 0).length;
   const citationShare =
     analysis.citations.length > 0
@@ -891,7 +893,9 @@ function FindingsDashboard({
 }
 
 function DiagnosisStep({ analysis, onRepair, onBack }: DiagnosisProps) {
-  const totalMax = analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
+  const totalMax =
+    analysis.scoreBreakdown.availableMax ??
+    analysis.scoreBreakdown.dimensions.reduce((s, d) => s + d.max, 0);
   const hasResearch = !!analysis.research;
 
   // Determine priority fix hint

@@ -1,13 +1,16 @@
-// answerCollector: query Perplexity Sonar N=3 times per prompt when available,
-// parse citations, and mark brand/competitor presence by domain match. Without
-// Perplexity, uses the shared Groq-first LLM chain to estimate answer-engine
-// mentions before falling back to deterministic demo data.
+// answerCollector: query Perplexity Sonar N times per prompt when available,
+// keep the actual answer text, and detect brand/competitor presence two ways:
+// citation-link hits (domain in the source list) and text mentions (named in
+// the answer). Without Perplexity we fall back to a clearly-labelled LLM
+// estimate ('estimated') or report the prompt as 'unavailable' — never
+// fabricated demo data.
 
-import type { Citation, CitationSource } from '@/lib/types';
+import type { Citation, CitationSource, Provenance } from '@/lib/types';
 import { config } from '@/lib/config';
 import { generateJson } from '@/lib/llm';
 
 const PPLX_URL = 'https://api.perplexity.ai/chat/completions';
+const SNIPPET_MAX_CHARS = 280;
 
 interface PerplexityChoice {
   message?: { content?: string };
@@ -25,6 +28,11 @@ interface RunCitation {
   title?: string;
 }
 
+interface AnswerRun {
+  citations: RunCitation[];
+  answerText: string;
+}
+
 interface LlmCitationOutput {
   brandCitedCount: number;
   competitorCitedCount: number;
@@ -39,10 +47,43 @@ function domainOf(input: string): string {
   }
 }
 
-// Module-scoped cache so re-runs in the same dev process are cheap (brief §8).
-const cache = new Map<string, RunCitation[][]>();
+// "linear.app" → "linear"; used for text-mention matching. Single-word brand
+// tokens can collide with common English words, so matching is word-boundary
+// and case-insensitive but we also accept the full domain string.
+function brandTokenOf(domain: string): string {
+  return domain.split('.')[0];
+}
 
-async function callPerplexity(apiKey: string, prompt: string): Promise<RunCitation[]> {
+function mentionCount(answerText: string, domain: string, token: string): boolean {
+  if (!answerText) return false;
+  const lower = answerText.toLowerCase();
+  if (domain && lower.includes(domain)) return true;
+  if (token.length < 3) return false;
+  const re = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  return re.test(answerText);
+}
+
+function citedInRun(run: RunCitation[], domain: string): boolean {
+  return run.some((c) => c.domain === domain || c.domain.endsWith(`.${domain}`));
+}
+
+// Pull the most informative excerpt: prefer a sentence that names the brand
+// or the competitor, fall back to the answer's opening.
+function extractSnippet(answers: string[], brandToken: string, competitorToken: string): string | undefined {
+  const texts = answers.filter((a) => a.trim().length > 0);
+  if (texts.length === 0) return undefined;
+  const sentences = texts[0].split(/(?<=[.!?])\s+/);
+  const hit =
+    sentences.find((s) => mentionCount(s, '', brandToken)) ??
+    sentences.find((s) => mentionCount(s, '', competitorToken));
+  const raw = (hit ?? texts[0]).replace(/\s+/g, ' ').trim();
+  return raw.length > SNIPPET_MAX_CHARS ? `${raw.slice(0, SNIPPET_MAX_CHARS - 1)}…` : raw;
+}
+
+// Module-scoped cache so re-runs in the same dev process are cheap (brief §8).
+const cache = new Map<string, AnswerRun[]>();
+
+async function callPerplexity(apiKey: string, prompt: string): Promise<AnswerRun> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.answerTimeoutMs);
   try {
@@ -59,8 +100,10 @@ async function callPerplexity(apiKey: string, prompt: string): Promise<RunCitati
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return [];
+    if (!res.ok) return { citations: [], answerText: '' };
     const data = (await res.json()) as PerplexityResponse;
+
+    const answerText = data.choices?.[0]?.message?.content?.trim() ?? '';
 
     // Newer responses populate `search_results`, older ones `citations`.
     const out: RunCitation[] = [];
@@ -78,59 +121,12 @@ async function callPerplexity(apiKey: string, prompt: string): Promise<RunCitati
         }
       }
     }
-    return out;
+    return { citations: out, answerText };
   } catch {
-    return [];
+    return { citations: [], answerText: '' };
   } finally {
     clearTimeout(timer);
   }
-}
-
-function mockRuns(
-  prompt: string,
-  promptIndex: number,
-  brandDomain: string,
-  competitorDomain: string,
-  brandUrl: string,
-  competitorUrl: string,
-  runCount: number,
-): RunCitation[][] {
-  // Pattern: competitor wins most of the time; brand barely shows up. This is
-  // the gap the demo is designed to surface, and it stays deterministic.
-  const competitorWin: RunCitation = {
-    url: `${competitorUrl.replace(/\/$/, '')}/why-${competitorDomain.split('.')[0]}`,
-    domain: competitorDomain,
-    title: `Why ${competitorDomain} — feature breakdown`,
-  };
-  const g2: RunCitation = {
-    url: `https://www.g2.com/compare/${brandDomain}-vs-${competitorDomain}`,
-    domain: 'g2.com',
-    title: `${brandDomain} vs ${competitorDomain} — G2 comparison`,
-  };
-  const brandHit: RunCitation = {
-    url: `${brandUrl.replace(/\/$/, '')}/`,
-    domain: brandDomain,
-    title: `${brandDomain} — homepage`,
-  };
-  const reddit: RunCitation = {
-    url: `https://www.reddit.com/r/SaaS/comments/abc/${prompt.replace(/\s+/g, '-').slice(0, 40)}`,
-    domain: 'reddit.com',
-    title: `Reddit thread: ${prompt}`,
-  };
-
-  const pattern =
-    promptIndex === 0
-      ? [
-          [competitorWin, g2],
-          [competitorWin, brandHit, reddit],
-          [g2, reddit],
-        ]
-      : [
-          [competitorWin, g2],
-          [competitorWin, reddit],
-          [g2, competitorWin],
-        ];
-  return Array.from({ length: runCount }, (_, i) => pattern[i % pattern.length]);
 }
 
 async function estimateCitationsWithLlm(
@@ -189,92 +185,111 @@ export async function answerCollector(
 ): Promise<Citation[]> {
   const brandDomain = domainOf(brandUrl);
   const competitorDomain = domainOf(competitorUrl);
+  const brandToken = brandTokenOf(brandDomain);
+  const competitorToken = brandTokenOf(competitorDomain);
   const apiKey = process.env.PERPLEXITY_API_KEY;
 
   const out: Citation[] = [];
 
-  for (let i = 0; i < prompts.length; i++) {
-    const prompt = prompts[i];
-    const cacheKey = `${config.perplexityModel}::${prompt}`;
-    let runs: RunCitation[][];
-    let estimated: LlmCitationOutput | null = null;
-
+  for (const prompt of prompts) {
     if (apiKey) {
-      const cached = cache.get(cacheKey);
-      if (cached) {
-        runs = cached;
-      } else {
+      const cacheKey = `${config.perplexityModel}::${prompt}`;
+      let runs = cache.get(cacheKey);
+      if (!runs) {
         runs = await Promise.all(
           Array.from({ length: config.answerRuns }, () => callPerplexity(apiKey, prompt)),
         );
         cache.set(cacheKey, runs);
       }
-    } else {
-      estimated = await estimateCitationsWithLlm(
+
+      const okRuns = runs.filter((r) => r.answerText || r.citations.length > 0);
+      const provenance: Provenance = okRuns.length > 0 ? 'measured' : 'unavailable';
+
+      let brandCitedCount = 0;
+      let competitorCitedCount = 0;
+      let brandMentionedCount = 0;
+      let competitorMentionedCount = 0;
+      const sources = new Map<string, CitationSource>();
+
+      for (const run of okRuns) {
+        if (citedInRun(run.citations, brandDomain)) brandCitedCount++;
+        if (citedInRun(run.citations, competitorDomain)) competitorCitedCount++;
+        if (mentionCount(run.answerText, brandDomain, brandToken)) brandMentionedCount++;
+        if (mentionCount(run.answerText, competitorDomain, competitorToken)) {
+          competitorMentionedCount++;
+        }
+        for (const c of run.citations) {
+          if (!sources.has(c.url)) {
+            sources.set(c.url, { domain: c.domain, url: c.url, title: c.title });
+          }
+        }
+      }
+
+      const denom = okRuns.length || 1;
+      const brandPresent = Math.max(brandCitedCount, brandMentionedCount);
+      const competitorPresent = Math.max(competitorCitedCount, competitorMentionedCount);
+
+      out.push({
         prompt,
-        config.answerRuns,
-        brandDomain,
-        competitorDomain,
-        brandUrl,
-        competitorUrl,
-      );
-      runs = estimated
-        ? []
-        : mockRuns(
-            prompt,
-            i,
-            brandDomain,
-            competitorDomain,
-            brandUrl,
-            competitorUrl,
-            config.answerRuns,
-          );
+        runs: okRuns.length,
+        brandCitedCount,
+        competitorCitedCount,
+        brandMentionedCount,
+        competitorMentionedCount,
+        brandFrequency: brandPresent / denom,
+        competitorFrequency: competitorPresent / denom,
+        answerSnippet: extractSnippet(
+          okRuns.map((r) => r.answerText),
+          brandToken,
+          competitorToken,
+        ),
+        sources: Array.from(sources.values()).slice(0, 8),
+        engine: 'perplexity',
+        provenance,
+      });
+      continue;
     }
 
-    let brandCitedCount = estimated?.brandCitedCount ?? 0;
-    let competitorCitedCount = estimated?.competitorCitedCount ?? 0;
-    // Requirement 4: deduplicate sources by domain (case-insensitive, www. stripped).
-    // Retain only the first URL encountered per domain in insertion order.
-    const sourcesByDomain = new Map<string, CitationSource>();
-    for (const source of estimated?.sources ?? []) {
-      const normalizedDomain = source.domain.replace(/^www\./, '').toLowerCase();
-      if (!sourcesByDomain.has(normalizedDomain)) {
-        sourcesByDomain.set(normalizedDomain, source);
-      }
-    }
-
-    for (const run of runs) {
-      // Requirement 4, AC3: increment counts at most once per run per domain
-      let brandFoundThisRun = false;
-      let compFoundThisRun = false;
-      for (const c of run) {
-        const normalizedDomain = c.domain.replace(/^www\./, '').toLowerCase();
-        if (normalizedDomain === brandDomain && !brandFoundThisRun) {
-          brandCitedCount++;
-          brandFoundThisRun = true;
-        }
-        if (normalizedDomain === competitorDomain && !compFoundThisRun) {
-          competitorCitedCount++;
-          compFoundThisRun = true;
-        }
-        // Deduplicate sources by normalized domain
-        if (!sourcesByDomain.has(normalizedDomain)) {
-          sourcesByDomain.set(normalizedDomain, { domain: c.domain, url: c.url, title: c.title });
-        }
-      }
-    }
-
-    // Requirement 4, AC2: at most 5 unique-domain sources per prompt
-    out.push({
+    // No Perplexity key: an LLM estimate is better than nothing, but it is a
+    // guess and gets labelled as such all the way to the UI.
+    const estimated = await estimateCitationsWithLlm(
       prompt,
-      runs: config.answerRuns,
-      brandCitedCount,
-      competitorCitedCount,
-      brandFrequency: brandCitedCount / config.answerRuns,
-      competitorFrequency: competitorCitedCount / config.answerRuns,
-      sources: Array.from(sourcesByDomain.values()).slice(0, 5),
-      engine: 'perplexity',
-    });
+      config.answerRuns,
+      brandDomain,
+      competitorDomain,
+      brandUrl,
+      competitorUrl,
+    );
+
+    if (estimated) {
+      out.push({
+        prompt,
+        runs: config.answerRuns,
+        brandCitedCount: estimated.brandCitedCount,
+        competitorCitedCount: estimated.competitorCitedCount,
+        brandMentionedCount: estimated.brandCitedCount,
+        competitorMentionedCount: estimated.competitorCitedCount,
+        brandFrequency: estimated.brandCitedCount / config.answerRuns,
+        competitorFrequency: estimated.competitorCitedCount / config.answerRuns,
+        sources: estimated.sources,
+        engine: 'perplexity',
+        provenance: 'estimated',
+      });
+    } else {
+      out.push({
+        prompt,
+        runs: 0,
+        brandCitedCount: 0,
+        competitorCitedCount: 0,
+        brandMentionedCount: 0,
+        competitorMentionedCount: 0,
+        brandFrequency: 0,
+        competitorFrequency: 0,
+        sources: [],
+        engine: 'perplexity',
+        provenance: 'unavailable',
+      });
+    }
   }
 
   return out;

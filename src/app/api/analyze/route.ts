@@ -156,6 +156,7 @@ export async function POST(req: Request) {
     citations,
     issues,
     createdAt: new Date().toISOString(),
+    signals: { brand, competitor },
   };
 
   // Requirement 2: add summary in concise mode

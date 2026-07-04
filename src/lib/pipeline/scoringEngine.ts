@@ -23,9 +23,29 @@ import {
   type CrawlSignals,
   type DimensionScore,
   type Issue,
+  type Provenance,
   type ScoreBreakdown,
   type ScoreDimension,
 } from '@/lib/types';
+
+function citationProvenance(citations: Citation[]): Provenance {
+  if (citations.some((c) => c.provenance === 'measured')) return 'measured';
+  if (citations.some((c) => c.provenance === 'estimated')) return 'estimated';
+  return 'unavailable';
+}
+
+// When the brand site couldn't be crawled, page-derived dimensions are
+// excluded from the score (reported out of availableMax) instead of being
+// scored against zeroed-out signals.
+function unavailableDim(dimension: ScoreDimension, url: string): DimensionScore {
+  return {
+    dimension,
+    score: 0,
+    max: DIMENSION_MAX[dimension],
+    reasons: [`Could not crawl ${url} — site unreachable or blocking bots; not scored.`],
+    provenance: 'unavailable',
+  };
+}
 
 // ─── 10-Question Diagnostic Framework ────────────────────────────────────────
 
@@ -39,6 +59,41 @@ interface DiagnosticResult {
 
 function runDiagnostics(brand: CrawlSignals, competitor: CrawlSignals, citations: Citation[]): DiagnosticResult[] {
   const results: DiagnosticResult[] = [];
+
+  // If we never saw the page, judging its titles/readability/images would be
+  // fiction. Emit one honest crawl-failure issue plus the citation-based
+  // checks, and skip everything page-derived.
+  if (!brand.fetched) {
+    results.push({
+      pass: false,
+      title: `Could not crawl ${brand.url}`,
+      detail:
+        'The site was unreachable or blocked our crawler, so all on-page checks were skipped instead of guessed. Sites that block crawlers often block AI answer engines too — check your robots.txt and bot protection.',
+      severity: 'high',
+      dimension: 'content_coverage',
+    });
+    const scored = citations.filter((c) => c.provenance !== 'unavailable');
+    const brandPresent = scored.filter((c) => c.brandFrequency > 0).length;
+    if (scored.length > 0 && brandPresent === 0) {
+      results.push({
+        pass: false,
+        title: 'Not cited in any AI answer',
+        detail:
+          'AI engines answered all tested prompts without mentioning your brand — your content doesn\'t address what buyers are actually asking.',
+        severity: 'high',
+        dimension: 'share_of_answer',
+      });
+    } else if (scored.length > 0 && brandPresent < scored.length * 0.5) {
+      results.push({
+        pass: false,
+        title: 'Low citation rate across buyer prompts',
+        detail: `Only named or cited in ${brandPresent} of ${scored.length} prompts. Your content partially addresses search intent but misses key queries.`,
+        severity: 'high',
+        dimension: 'share_of_answer',
+      });
+    }
+    return results;
+  }
 
   // Q1: Is the keyword clear?
   if (!brand.titleHasKeyword) {
@@ -71,9 +126,12 @@ function runDiagnostics(brand: CrawlSignals, competitor: CrawlSignals, citations
   }
 
   // Q3: Does the page answer what users are searching for?
-  const brandCited = citations.filter((c) => c.brandCitedCount > 0).length;
-  const promptCount = citations.length || 1;
-  if (brandCited === 0) {
+  // Presence counts a text mention OR a citation link; prompts with no answer
+  // data at all are excluded rather than counted as misses.
+  const scoredCitations = citations.filter((c) => c.provenance !== 'unavailable');
+  const brandCited = scoredCitations.filter((c) => c.brandFrequency > 0).length;
+  const promptCount = scoredCitations.length;
+  if (promptCount > 0 && brandCited === 0) {
     results.push({
       pass: false,
       title: 'Not cited in any AI answer',
@@ -81,11 +139,11 @@ function runDiagnostics(brand: CrawlSignals, competitor: CrawlSignals, citations
       severity: 'high',
       dimension: 'share_of_answer',
     });
-  } else if (brandCited < promptCount * 0.5) {
+  } else if (promptCount > 0 && brandCited < promptCount * 0.5) {
     results.push({
       pass: false,
       title: 'Low citation rate across buyer prompts',
-      detail: `Only cited in ${brandCited} of ${promptCount} prompts. Your content partially addresses search intent but misses key queries.`,
+      detail: `Only named or cited in ${brandCited} of ${promptCount} prompts. Your content partially addresses search intent but misses key queries.`,
       severity: 'high',
       dimension: 'share_of_answer',
     });
@@ -623,14 +681,28 @@ function runDiagnostics(brand: CrawlSignals, competitor: CrawlSignals, citations
 
 function shareOfAnswer(citations: Citation[]): DimensionScore {
   const max = DIMENSION_MAX.share_of_answer;
-  const promptCount = citations.length || 1;
-  const brandCitedPrompts = citations.filter((c) => c.brandCitedCount > 0).length;
-  const competitorCitedPrompts = citations.filter((c) => c.competitorCitedCount > 0).length;
-  const score = Math.round((brandCitedPrompts / promptCount) * max);
+  const provenance = citationProvenance(citations);
+  if (provenance === 'unavailable') {
+    return {
+      dimension: 'share_of_answer',
+      score: 0,
+      max,
+      reasons: ['No AI answer data could be collected for these prompts; not scored.'],
+      provenance,
+    };
+  }
+  // Presence = named in the answer text OR cited as a source; weighted by how
+  // many runs the brand showed up in, so 3/3 runs beats 1/3.
+  const scored = citations.filter((c) => c.provenance !== 'unavailable');
+  const promptCount = scored.length || 1;
+  const brandPresentPrompts = scored.filter((c) => c.brandFrequency > 0).length;
+  const competitorPresentPrompts = scored.filter((c) => c.competitorFrequency > 0).length;
+  const avgFrequency = scored.reduce((s, c) => s + c.brandFrequency, 0) / promptCount;
+  const score = Math.round(avgFrequency * max);
   const reasons: string[] = [
-    `Cited in ${brandCitedPrompts} of ${promptCount} prompts; competitor cited in ${competitorCitedPrompts} of ${promptCount}.`,
+    `Named or cited in ${brandPresentPrompts} of ${promptCount} prompts (avg ${Math.round(avgFrequency * 100)}% of answer runs); competitor appeared in ${competitorPresentPrompts} of ${promptCount}.`,
   ];
-  return { dimension: 'share_of_answer', score, max, reasons };
+  return { dimension: 'share_of_answer', score, max, reasons, provenance };
 }
 
 function contentCoverage(brand: CrawlSignals, competitor: CrawlSignals): DimensionScore {
@@ -738,6 +810,9 @@ function evidenceDensity(brand: CrawlSignals, competitor: CrawlSignals): Dimensi
   } else {
     reasons.push(`${brand.evidenceCount} evidence mentions; competitor has ${competitor.evidenceCount}.`);
   }
+  if (!competitor.fetched) {
+    reasons.push('Competitor site could not be crawled, so this comparison is one-sided.');
+  }
 
   return { dimension: 'evidence_density', score, max, reasons };
 }
@@ -830,21 +905,30 @@ export async function scoringEngine(
   // Run the 10-question diagnostic framework
   const diagnostics = runDiagnostics(brand, competitor, citations);
 
-  const dimensions: DimensionScore[] = [
-    shareOfAnswer(citations),
-    contentCoverage(brand, competitor),
-    structuredData(brand, competitor),
-    evidenceDensity(brand, competitor),
-    freshnessTrust(brand, competitor),
-  ];
-  const total = dimensions.reduce((sum, d) => sum + d.score, 0);
+  // Page-derived dimensions are only scored when we actually read the site;
+  // otherwise they're marked unavailable and excluded from the denominator.
+  const pageDimensions: DimensionScore[] = brand.fetched
+    ? [
+        { ...contentCoverage(brand, competitor), provenance: 'measured' as const },
+        { ...structuredData(brand, competitor), provenance: 'measured' as const },
+        { ...evidenceDensity(brand, competitor), provenance: 'measured' as const },
+        { ...freshnessTrust(brand, competitor), provenance: 'measured' as const },
+      ]
+    : (
+        ['content_coverage', 'structured_data', 'evidence_density', 'freshness_trust'] as ScoreDimension[]
+      ).map((d) => unavailableDim(d, brand.url));
+
+  const dimensions: DimensionScore[] = [shareOfAnswer(citations), ...pageDimensions];
+  const scorable = dimensions.filter((d) => d.provenance !== 'unavailable');
+  const total = scorable.reduce((sum, d) => sum + d.score, 0);
+  const availableMax = scorable.reduce((sum, d) => sum + d.max, 0);
 
   // All diagnostics produce issues — no cap regardless of verbosity
   const issues = buildIssues(diagnostics);
 
   return {
     score: total,
-    breakdown: { total, dimensions },
+    breakdown: { total, availableMax, dimensions },
     issues,
   };
 }

@@ -1,93 +1,35 @@
-// Crawler: fetch a page and extract the signals the rubric scores (brief §7).
-// Falls back to a representative mock when fetch fails so the demo never breaks.
+// Crawler: fetch the homepage plus a handful of discovered key pages
+// (FAQ / pricing / comparison) and extract the signals the rubric scores
+// (brief §7), plus the extended 10-question diagnostic signals from the
+// homepage. When nothing can be fetched we report fetched:false and let the
+// scoring engine mark page-derived dimensions unavailable — we never invent
+// signals for a site we couldn't read.
 
 import * as cheerio from 'cheerio';
 import { config } from '@/lib/config';
 import type { CrawlSignals, PricingClarity } from '@/lib/types';
 
-function mockFor(url: string, role: 'brand' | 'competitor'): CrawlSignals {
-  if (role === 'competitor') {
-    return {
-      url,
-      hasFaq: true,
-      hasComparisonPage: true,
-      pricingClarity: 'clear',
-      jsonLdTypes: ['FAQPage', 'Product', 'Organization'],
-      evidenceCount: 18,
-      lastUpdated: '2026-05-12T00:00:00.000Z',
-      trustSignals: ['testimonials', 'case_studies', 'press_mentions'],
-      titleLength: 55,
-      titleHasKeyword: true,
-      metaDescriptionLength: 145,
-      h1Count: 1,
-      h1Text: 'The best project management tool for teams',
-      readabilityScore: 72,
-      hasViewportMeta: true,
-      internalLinkCount: 24,
-      externalLinkCount: 5,
-      imagesTotal: 12,
-      imagesWithAlt: 11,
-      wordCount: 1800,
-      avgSentenceLength: 16,
-      hasCtaButton: true,
-      ctaCount: 3,
-      hasSocialProofNearCta: true,
-      headingCount: 12,
-      hasSubheadingHierarchy: true,
-      bulletListCount: 5,
-      hasPowerWords: true,
-      hasValueProposition: true,
-      uniqueWordRatio: 0.62,
-      passiveVoiceRatio: 0.08,
-      hasNumbersInHeadings: true,
-      paragraphAvgLength: 2.5,
-      hasDirectAnswerNearTop: true,
-      hasSpecificFacts: true,
-      contentOriginalityScore: 75,
-      isCrawlableByAi: true,
-      isBrandEntityClear: true,
-    };
+const MAX_EXTRA_PAGES = 4;
+const TEXT_SAMPLE_CHARS = 2000;
+
+async function fetchHtml(url: string): Promise<{ html: string; lastModified: string | null } | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { 'user-agent': config.userAgent, accept: 'text/html,application/xhtml+xml' },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') ?? '';
+    if (!ct.includes('text/html') && !ct.includes('xml')) return null;
+    return { html: await res.text(), lastModified: res.headers.get('last-modified') };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return {
-    url,
-    hasFaq: false,
-    hasComparisonPage: false,
-    pricingClarity: 'partial',
-    jsonLdTypes: [],
-    evidenceCount: 3,
-    lastUpdated: null,
-    trustSignals: ['testimonials'],
-    titleLength: 12,
-    titleHasKeyword: false,
-    metaDescriptionLength: 40,
-    h1Count: 1,
-    h1Text: 'Welcome',
-    readabilityScore: 45,
-    hasViewportMeta: true,
-    internalLinkCount: 4,
-    externalLinkCount: 1,
-    imagesTotal: 6,
-    imagesWithAlt: 2,
-    wordCount: 350,
-    avgSentenceLength: 24,
-    hasCtaButton: false,
-    ctaCount: 0,
-    hasSocialProofNearCta: false,
-    headingCount: 2,
-    hasSubheadingHierarchy: false,
-    bulletListCount: 0,
-    hasPowerWords: false,
-    hasValueProposition: false,
-    uniqueWordRatio: 0.38,
-    passiveVoiceRatio: 0.22,
-    hasNumbersInHeadings: false,
-    paragraphAvgLength: 5.2,
-    hasDirectAnswerNearTop: false,
-    hasSpecificFacts: false,
-    contentOriginalityScore: 30,
-    isCrawlableByAi: true,
-    isBrandEntityClear: false,
-  };
 }
 
 function extractJsonLdTypes($: cheerio.CheerioAPI): string[] {
@@ -440,7 +382,6 @@ function extractAiReadiness($: cheerio.CheerioAPI, url: string): AiReadinessSign
   // Q14: Crawlable by AI bots — check for robots meta noindex or very restricted indicators
   const robotsMeta = $('meta[name="robots"]').attr('content') ?? '';
   const hasNoindex = /noindex/i.test(robotsMeta);
-  const hasNofollow = /nofollow/i.test(robotsMeta);
   // We can't fetch robots.txt in this context, but we can check meta tags
   const isCrawlableByAi = !hasNoindex;
 
@@ -469,36 +410,156 @@ function extractAiReadiness($: cheerio.CheerioAPI, url: string): AiReadinessSign
   };
 }
 
-export async function crawler(url: string, role: 'brand' | 'competitor'): Promise<CrawlSignals> {
-  let html: string | null = null;
-  let headerLastModified: string | null = null;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
-    const res = await fetch(url, {
-      headers: { 'user-agent': config.userAgent, accept: 'text/html,application/xhtml+xml' },
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (res.ok) {
-      const ct = res.headers.get('content-type') ?? '';
-      if (ct.includes('text/html') || ct.includes('xml')) {
-        html = await res.text();
-        headerLastModified = res.headers.get('last-modified');
-      }
-    }
-  } catch {
-    html = null;
-  }
+// ─── Multi-page crawl ────────────────────────────────────────────────────────
 
-  if (!html) {
-    // Demo-safe fallback so the pipeline never strands the user.
-    return mockFor(url, role);
-  }
+// Rubric signals we merge across every crawled page (extended diagnostics stay
+// homepage-only — that's the page AI engines land on).
+interface PageSignals {
+  url: string;
+  hasFaq: boolean;
+  hasComparisonPage: boolean;
+  pricingClarity: PricingClarity;
+  jsonLdTypes: string[];
+  evidenceCount: number;
+  lastUpdated: string | null;
+  trustSignals: string[];
+}
 
-  const $ = cheerio.load(html);
+function rubricSignals($: cheerio.CheerioAPI, url: string, headerLastModified: string | null): PageSignals {
   const jsonLdTypes = extractJsonLdTypes($);
+  return {
+    url,
+    hasFaq: detectFaq($, jsonLdTypes),
+    hasComparisonPage: detectComparisonPage($),
+    pricingClarity: detectPricingClarity($),
+    jsonLdTypes,
+    evidenceCount: countEvidence($),
+    lastUpdated: extractLastUpdated($, headerLastModified),
+    trustSignals: detectTrustSignals($),
+  };
+}
+
+// Pick internal links worth a follow-up crawl: FAQ, pricing, and
+// comparison/alternatives pages are exactly what the rubric scores, and they
+// rarely live on the homepage.
+function keyPageLinks(baseUrl: string, $: cheerio.CheerioAPI): string[] {
+  const base = new URL(baseUrl);
+  const buckets: Record<'faq' | 'pricing' | 'compare', string | null> = {
+    faq: null,
+    pricing: null,
+    compare: null,
+  };
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') ?? '';
+    let resolved: URL;
+    try {
+      resolved = new URL(href, base);
+    } catch {
+      return;
+    }
+    if (resolved.hostname !== base.hostname) return;
+    const path = resolved.pathname.toLowerCase();
+    if (!buckets.faq && /(^|\/)(faq|faqs|frequently-asked)/.test(path)) {
+      buckets.faq = resolved.toString();
+    } else if (!buckets.pricing && /(^|\/)(pricing|plans)(\/|$)/.test(path)) {
+      buckets.pricing = resolved.toString();
+    } else if (
+      !buckets.compare &&
+      /(\/(vs|versus|compare|comparison|alternatives?)(\/|$)|-vs-|-versus-)/.test(path)
+    ) {
+      buckets.compare = resolved.toString();
+    }
+  });
+  return Object.values(buckets)
+    .filter((u): u is string => u !== null)
+    .slice(0, MAX_EXTRA_PAGES);
+}
+
+function pricingRank(p: PricingClarity): number {
+  return p === 'clear' ? 2 : p === 'partial' ? 1 : 0;
+}
+
+// Honest failure: nothing fetched means nothing scored. The scoring engine
+// marks page-derived dimensions unavailable and the UI says so.
+function unfetched(url: string): CrawlSignals {
+  return {
+    url,
+    fetched: false,
+    pagesCrawled: [],
+    hasFaq: false,
+    hasComparisonPage: false,
+    pricingClarity: 'missing',
+    jsonLdTypes: [],
+    evidenceCount: 0,
+    lastUpdated: null,
+    trustSignals: [],
+    titleLength: 0,
+    titleHasKeyword: false,
+    metaDescriptionLength: 0,
+    h1Count: 0,
+    h1Text: '',
+    readabilityScore: 0,
+    hasViewportMeta: false,
+    internalLinkCount: 0,
+    externalLinkCount: 0,
+    imagesTotal: 0,
+    imagesWithAlt: 0,
+    wordCount: 0,
+    avgSentenceLength: 0,
+    hasCtaButton: false,
+    ctaCount: 0,
+    hasSocialProofNearCta: false,
+    headingCount: 0,
+    hasSubheadingHierarchy: false,
+    bulletListCount: 0,
+    hasPowerWords: false,
+    hasValueProposition: false,
+    uniqueWordRatio: 0,
+    passiveVoiceRatio: 0,
+    hasNumbersInHeadings: false,
+    paragraphAvgLength: 0,
+    hasDirectAnswerNearTop: false,
+    hasSpecificFacts: false,
+    contentOriginalityScore: 0,
+    isCrawlableByAi: false,
+    isBrandEntityClear: false,
+  };
+}
+
+export async function crawler(url: string, _role: 'brand' | 'competitor'): Promise<CrawlSignals> {
+  const home = await fetchHtml(url);
+  if (!home) return unfetched(url);
+
+  const $ = cheerio.load(home.html);
+  const homeSignals = rubricSignals($, url, home.lastModified);
+
+  // Follow up to MAX_EXTRA_PAGES discovered FAQ/pricing/comparison pages so a
+  // brand whose FAQ lives at /faq isn't scored as "missing FAQ".
+  const extraUrls = keyPageLinks(url, $);
+  const extraPages = (
+    await Promise.all(
+      extraUrls.map(async (u) => {
+        const res = await fetchHtml(u);
+        if (!res) return null;
+        return rubricSignals(cheerio.load(res.html), u, res.lastModified);
+      }),
+    )
+  ).filter((p): p is PageSignals => p !== null);
+
+  const pages = [homeSignals, ...extraPages];
+  const hasComparisonPage =
+    pages.some((p) => p.hasComparisonPage) ||
+    extraUrls.some((u) => /(\/(vs|versus|compare|comparison|alternatives?)(\/|$)|-vs-|-versus-)/.test(u));
+  const jsonLdTypes = Array.from(new Set(pages.flatMap((p) => p.jsonLdTypes)));
+  const trustSignals = Array.from(new Set(pages.flatMap((p) => p.trustSignals)));
+  const lastUpdated =
+    pages
+      .map((p) => p.lastUpdated)
+      .filter((d): d is string => d !== null)
+      .sort()
+      .pop() ?? null;
+
+  // Extended diagnostics come from the homepage — the page AI engines land on.
   const { titleLength } = extractTitle($);
   const titleHasKeyword = checkTitleHasKeyword($, url);
   const metaDescriptionLength = extractMetaDescriptionLength($);
@@ -512,13 +573,21 @@ export async function crawler(url: string, role: 'brand' | 'competitor'): Promis
 
   return {
     url,
-    hasFaq: detectFaq($, jsonLdTypes),
-    hasComparisonPage: detectComparisonPage($),
-    pricingClarity: detectPricingClarity($),
+    fetched: true,
+    pagesCrawled: pages.map((p) => p.url),
+    hasFaq: pages.some((p) => p.hasFaq),
+    hasComparisonPage,
+    pricingClarity: pages.reduce<PricingClarity>(
+      (best, p) => (pricingRank(p.pricingClarity) > pricingRank(best) ? p.pricingClarity : best),
+      'missing',
+    ),
     jsonLdTypes,
-    evidenceCount: countEvidence($),
-    lastUpdated: extractLastUpdated($, headerLastModified),
-    trustSignals: detectTrustSignals($),
+    // Max per page rather than sum, so crawling more pages doesn't inflate
+    // the density comparison between brand and competitor.
+    evidenceCount: Math.max(...pages.map((p) => p.evidenceCount)),
+    lastUpdated,
+    trustSignals,
+    textSample: $('body').text().replace(/\s+/g, ' ').trim().slice(0, TEXT_SAMPLE_CHARS),
     titleLength,
     titleHasKeyword,
     metaDescriptionLength,

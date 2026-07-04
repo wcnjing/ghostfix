@@ -20,6 +20,26 @@ interface GeminiResp {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
 }
 
+// Log once per provider+status so a broken key doesn't spam the console on
+// every pipeline call but the reason is never invisible.
+const loggedFailures = new Set<string>();
+
+async function logApiFailure(provider: string, res: Response): Promise<void> {
+  const key = `${provider}:${res.status}`;
+  if (loggedFailures.has(key)) return;
+  loggedFailures.add(key);
+  const body = await res.text().catch(() => '');
+  let hint = '';
+  if (res.status === 400 || res.status === 401 || res.status === 403) {
+    hint = ' (key invalid, expired, or API not enabled for this project?)';
+  } else if (res.status === 404) {
+    hint = ` (model not found — it may be retired; override with ${provider === 'gemini' ? 'GEMINI_MODEL' : 'GROQ_MODEL'} in .env.local)`;
+  } else if (res.status === 429) {
+    hint = ' (rate limit / free-tier quota exhausted)';
+  }
+  console.error(`[llm] ${provider} request failed: HTTP ${res.status}${hint}\n${body.slice(0, 500)}`);
+}
+
 async function callGroqRaw(prompt: string, opts: CallOpts): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
@@ -40,10 +60,14 @@ async function callGroqRaw(prompt: string, opts: CallOpts): Promise<string | nul
         ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await logApiFailure('groq', res);
+      return null;
+    }
     const data = (await res.json()) as GroqResp;
     return data.choices?.[0]?.message?.content?.trim() ?? null;
-  } catch {
+  } catch (e) {
+    console.error('[llm] groq request threw:', e instanceof Error ? e.message : e);
     return null;
   }
 }
@@ -65,12 +89,16 @@ async function callGeminiRaw(prompt: string, opts: CallOpts): Promise<string | n
         },
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await logApiFailure('gemini', res);
+      return null;
+    }
     const data = (await res.json()) as GeminiResp;
     return (
       data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').trim() ?? null
     );
-  } catch {
+  } catch (e) {
+    console.error('[llm] gemini request threw:', e instanceof Error ? e.message : e);
     return null;
   }
 }
