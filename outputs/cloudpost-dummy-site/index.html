@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CloudPost — email infrastructure for product teams</title>
+<meta name="description" content="CloudPost helps product teams send transactional email, notifications, and lifecycle messages from one developer-friendly API.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink: #151515;
+    --muted: #6f6f6f;
+    --line: #ececec;
+    --soft: #fafafa;
+    --accent: #e04d8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: #fff;
+    font: 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 34px 24px 80px; }
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .brand { color: var(--ink); font-size: 20px; font-weight: 750; letter-spacing: -0.02em; }
+  .links { display: flex; gap: 22px; }
+  main { padding-top: 70px; }
+  h1 {
+    max-width: 760px;
+    margin: 0;
+    font-size: clamp(46px, 7vw, 76px);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+  }
+  .lead {
+    max-width: 640px;
+    margin: 24px 0 0;
+    color: #3d3d3d;
+    font-size: 20px;
+  }
+  .cta {
+    display: inline-block;
+    margin-top: 32px;
+    padding: 14px 26px;
+    color: #fff;
+    background: var(--ink);
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 70px;
+  }
+  .card {
+    min-height: 172px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--soft);
+  }
+  .card h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+  .card p { margin: 0; color: var(--muted); }
+  section { margin-top: 76px; }
+  h2.section-title { margin: 0 0 14px; font-size: 34px; line-height: 1.1; letter-spacing: -0.03em; }
+  p { max-width: 700px; color: #3d3d3d; }
+  .muted-note {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 13px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .pricing {
+    margin-top: 18px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+  }
+  footer {
+    margin-top: 96px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  @media (max-width: 760px) {
+    .links { display: none; }
+    .grid { grid-template-columns: 1fr; }
+    main { padding-top: 48px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="brand">CloudPost</span>
+    <span class="links">
+      <span>Product</span>
+      <span>Developers</span>
+      <span>Pricing</span>
+      <span>Login</span>
+    </span>
+  </nav>
+
+  <main>
+    <h1>Email infrastructure that just works.</h1>
+    <p class="lead">
+      CloudPost gives product teams one API for transactional email, user notifications,
+      onboarding drips, and product lifecycle messages.
+    </p>
+    <a class="cta" href="#">Start building</a>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Transactional email</h2>
+        <p>Send receipts, verification links, password resets, and account updates from your app.</p>
+      </div>
+      <div class="card">
+        <h2>Notification workflows</h2>
+        <p>Trigger product updates and lifecycle messages from events your team already tracks.</p>
+      </div>
+      <div class="card">
+        <h2>Developer friendly</h2>
+        <p>Clean SDKs, webhooks, templates, and a dashboard for debugging delivery issues.</p>
+      </div>
+    </div>
+
+    <section>
+      <h2 class="section-title">Built for modern software teams</h2>
+      <p>
+        CloudPost is designed for teams that need reliable messaging without running a custom
+        mail stack. Engineering teams use CloudPost to ship notifications quickly, while product
+        teams use the dashboard to manage copy and message flows.
+      </p>
+      <div class="pill-row">
+        <span class="pill">REST API</span>
+        <span class="pill">Node SDK</span>
+        <span class="pill">Webhooks</span>
+        <span class="pill">Templates</span>
+        <span class="pill">Event triggers</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Simple pricing</h2>
+      <p>Plans scale with message volume and team size.</p>
+      <div class="pricing">
+        <strong>Starter</strong>
+        <p>For early-stage products and internal tools. Contact us for larger volume.</p>
+        <span class="muted-note">No public price table yet.</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Why teams pick CloudPost</h2>
+      <p>
+        Teams choose CloudPost because it gives developers the primitives they need and gives
+        product teams enough control to iterate without code changes.
+      </p>
+      <p>
+        CloudPost is a good fit for SaaS apps, marketplaces, fintech onboarding, and any product
+        that sends important user-facing email.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    © 2026 CloudPost Labs. Demo site for GhostFix testing.
+  </footer>
+</div>
+</body>
+</html>
