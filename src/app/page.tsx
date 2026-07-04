@@ -139,13 +139,17 @@ const FIX_BLUEPRINT: Record<
   },
 };
 
-const DEFAULT_BRAND = 'https://linear.app';
-const DEFAULT_COMPETITOR = 'https://www.atlassian.com/software/jira';
-const DEFAULT_PROMPTS = [
-  'best project management tool for engineers',
-  'linear vs jira for fast moving startups',
-  'simplest issue tracker with keyboard shortcuts',
-].join('\n');
+// A "properly formatted" link: parses as a URL, uses http(s), and has a real
+// hostname (dotted domain, or localhost for local testing).
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    return url.hostname.includes('.') || url.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -306,8 +310,6 @@ interface InputProps {
   manualCount: number;
   onResearch: () => void;
   onManual: () => void;
-  onDemo: () => void;
-  onTestFixture: () => void;
 }
 
 function InputStep({
@@ -317,7 +319,7 @@ function InputStep({
   promptsText, setPromptsText,
   manual, setManual,
   manualCount,
-  onResearch, onManual, onDemo, onTestFixture,
+  onResearch, onManual,
 }: InputProps) {
   return (
     <div className="grid min-h-[70vh] items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
@@ -429,16 +431,6 @@ function InputStep({
               Run research
             </button>
           )}
-          <button onClick={onDemo} className="rounded-full px-3 py-2 text-sm text-[var(--ink-500)] hover:bg-pink-50 hover:text-[var(--pink-600)]">
-            Try demo
-          </button>
-          <button
-            onClick={onTestFixture}
-            className="rounded-full px-3 py-2 text-sm text-[var(--ink-500)] hover:bg-pink-50 hover:text-[var(--pink-600)]"
-            title="Loads two built-in fake landing pages so you can see the scoring + repair flow end-to-end"
-          >
-            Test fixture
-          </button>
         </div>
 
         <div className="gf-float mt-6 rounded-2xl border border-pink-100 bg-white/70 p-4">
@@ -1647,11 +1639,11 @@ export default function HomePage() {
   const [step, setStep] = useState<Step>('connect');
   const [error, setError] = useState<string | null>(null);
 
-  const [brandUrl, setBrandUrl] = useState(DEFAULT_BRAND);
+  const [brandUrl, setBrandUrl] = useState('');
   const [hint, setHint] = useState('');
   const [manual, setManual] = useState(false);
-  const [competitorUrl, setCompetitorUrl] = useState(DEFAULT_COMPETITOR);
-  const [promptsText, setPromptsText] = useState(DEFAULT_PROMPTS);
+  const [competitorUrl, setCompetitorUrl] = useState('');
+  const [promptsText, setPromptsText] = useState('');
 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [fixes, setFixes] = useState<Fix[] | null>(null);
@@ -1740,28 +1732,38 @@ export default function HomePage() {
   );
 
   const analyze = async (
-    mode: 'research' | 'manual' | 'demo',
+    mode: 'research' | 'manual',
     override?: { brandUrl?: string; competitorUrl?: string; prompts?: string[]; hint?: string },
   ) => {
     setError(null);
+
+    // Reject malformed links before hitting the API, with an example of what
+    // a valid one looks like.
+    const targetBrandUrl = override?.brandUrl ?? brandUrl;
+    if (!isValidHttpUrl(targetBrandUrl)) {
+      setError('That doesn’t look like a valid website URL. Use a full link like https://yourbrand.com');
+      setStep('input');
+      return;
+    }
+    const targetCompetitorUrl = override?.competitorUrl ?? competitorUrl;
+    if (mode === 'manual' && !isValidHttpUrl(targetCompetitorUrl)) {
+      setError('The competitor URL isn’t a valid link. Use a full link like https://competitor.com');
+      setStep('input');
+      return;
+    }
+
     setStep('analyzing');
     const body: Record<string, unknown> =
-      mode === 'demo'
+      mode === 'manual'
         ? {
-            brandUrl: DEFAULT_BRAND,
-            competitorUrl: DEFAULT_COMPETITOR,
-            prompts: DEFAULT_PROMPTS.split('\n').filter(Boolean),
+            brandUrl: targetBrandUrl,
+            competitorUrl: targetCompetitorUrl,
+            prompts: override?.prompts ?? prompts,
           }
-        : mode === 'manual'
-          ? {
-              brandUrl: override?.brandUrl ?? brandUrl,
-              competitorUrl: override?.competitorUrl ?? competitorUrl,
-              prompts: override?.prompts ?? prompts,
-            }
-          : {
-              brandUrl: override?.brandUrl ?? brandUrl,
-              hint: (override?.hint ?? hint) || undefined,
-            };
+        : {
+            brandUrl: targetBrandUrl,
+            hint: (override?.hint ?? hint) || undefined,
+          };
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -1840,39 +1842,6 @@ export default function HomePage() {
     setError(null);
   };
 
-  const demo = () => {
-    setBrandUrl(DEFAULT_BRAND);
-    setCompetitorUrl(DEFAULT_COMPETITOR);
-    setPromptsText(DEFAULT_PROMPTS);
-    void analyze('demo');
-  };
-
-  // Prefills the inputs with the built-in fake landing pages under
-  // public/demo-sites/ so the full diagnose→repair→ship flow can be tested
-  // end-to-end without depending on real third-party sites.
-  const testFixture = () => {
-    const origin = window.location.origin;
-    const fixtureBrandUrl = `${origin}/demo-sites/weak/`;
-    const fixtureCompetitorUrl = `${origin}/demo-sites/strong/`;
-    const fixturePrompts = [
-      'best project management for engineering teams',
-      'vertex vs spectra',
-      'cheapest sprint planning tool with git integration',
-      'is spectra worth it for startups',
-      'top alternatives to vertex',
-    ];
-    setManual(true);
-    setBrandUrl(fixtureBrandUrl);
-    setCompetitorUrl(fixtureCompetitorUrl);
-    setPromptsText(fixturePrompts.join('\n'));
-    setError(null);
-    void analyze('manual', {
-      brandUrl: fixtureBrandUrl,
-      competitorUrl: fixtureCompetitorUrl,
-      prompts: fixturePrompts,
-    });
-  };
-
   return (
     <main className="gf-shell mx-auto max-w-6xl px-6 py-6 sm:px-10 sm:py-10">
       <Header step={step} ghUser={ghUser} onLogout={disconnect} />
@@ -1898,8 +1867,6 @@ export default function HomePage() {
           manualCount={prompts.length}
           onResearch={() => analyze('research')}
           onManual={() => analyze('manual')}
-          onDemo={demo}
-          onTestFixture={testFixture}
         />
       )}
 
